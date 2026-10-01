@@ -1,0 +1,53 @@
+# --- Rust build output ---
+/target/
+**/target/
+*.pdb
+
+# --- Local, machine-specific configuration (paths to owned game installs) ---
+tools/local-env.ps1
+.env
+*.local.*
+
+# --- Reference repositories (cloned for study, never vendored) ---
+research/references/
+
+# --- Proprietary game data: NEVER commit ---
+# Extracted / converted Apex, R5 or other game assets, dumps and binaries.
+*.rpak
+*.starpak
+*.opt.starpak
+*.mstr
+*.bsp
+*.bsp_lump
+*.rmdl
+*.rrig
+*.rseq
+*.rson
+*.vpk
+*.mdl
+*.vtx
+*.vvd
+*.ff
+*.dll
+*.exe
+*.bin
+extracted/
+dumps/
+assets-local/
+game-data/
+
+# --- Generated caches / run output ---
+artifacts/
+traces/*.csv
+traces/*.json
+!traces/.gitkeep
+*.log
+
+# --- Editor / OS ---
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+Thumbs.db
+.DS_Store

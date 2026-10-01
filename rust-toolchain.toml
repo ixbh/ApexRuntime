@@ -1,0 +1,6 @@
+# Pinned (not just "stable") so recorded movement traces stay reproducible
+# bit-for-bit across machines. Bump deliberately, then re-run the golden tests.
+[toolchain]
+channel = "1.99.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

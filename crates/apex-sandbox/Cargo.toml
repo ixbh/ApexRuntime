@@ -1,0 +1,19 @@
+[package]
+name = "apex-sandbox"
+description = "First-person Bevy sandbox for tuning ApexRuntime movement. The only crate that depends on Bevy."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+apex-math.workspace = true
+apex-collision.workspace = true
+apex-core.workspace = true
+apex-telemetry.workspace = true
+serde_json.workspace = true
+# Same major as IW4L (0.19) so a future IW4L adapter shares one Bevy.
+bevy = "0.19"
+
+[lints]
+workspace = true

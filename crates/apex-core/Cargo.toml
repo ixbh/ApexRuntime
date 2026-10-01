@@ -1,0 +1,19 @@
+[package]
+name = "apex-core"
+description = "Engine-independent Apex-style player movement: MovementState + MovementInput + CollisionWorld + dt -> MovementState."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# No renderer, no ECS, no engine. Only math + the collision interface.
+[dependencies]
+apex-math.workspace = true
+apex-collision.workspace = true
+serde = { workspace = true, optional = true }
+
+[features]
+serde = ["dep:serde", "apex-math/serde", "apex-collision/serde"]
+
+[lints]
+workspace = true

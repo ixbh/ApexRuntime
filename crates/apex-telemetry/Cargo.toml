@@ -1,0 +1,21 @@
+[package]
+name = "apex-telemetry"
+description = "Movement traces, input scripts and deterministic replay for ApexRuntime."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+apex-math = { workspace = true, features = ["serde"] }
+apex-collision = { workspace = true, features = ["serde"] }
+apex-core = { workspace = true, features = ["serde"] }
+serde.workspace = true
+serde_json.workspace = true
+
+[[bin]]
+name = "apex-replay"
+path = "src/bin/apex_replay.rs"
+
+[lints]
+workspace = true

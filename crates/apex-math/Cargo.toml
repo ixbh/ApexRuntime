@@ -1,0 +1,17 @@
+[package]
+name = "apex-math"
+description = "Deterministic f32 vector math for ApexRuntime (Z-up, Source units)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+libm.workspace = true
+serde = { workspace = true, optional = true }
+
+[features]
+serde = ["dep:serde"]
+
+[lints]
+workspace = true

@@ -1,0 +1,17 @@
+[package]
+name = "apex-collision"
+description = "Collision query interface for ApexRuntime movement, plus a pure-Rust brush world for tests and the sandbox."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+apex-math.workspace = true
+serde = { workspace = true, optional = true }
+
+[features]
+serde = ["dep:serde", "apex-math/serde"]
+
+[lints]
+workspace = true

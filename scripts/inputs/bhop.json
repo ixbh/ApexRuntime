@@ -1,0 +1,83 @@
+{
+  "name": "bhop-forward",
+  "description": "Sprint forward, then tap jump every 48 ticks (airtime is ~46.4 ticks at 60 Hz), 5 hops. Checks speed preservation across jumps.",
+  "tick_rate": 60,
+  "ticks": 340,
+  "start": {
+    "position": [
+      -1500,
+      0,
+      0
+    ],
+    "yaw": 0
+  },
+  "events": [
+    {
+      "tick": 0,
+      "forward": 1,
+      "press": [
+        "sprint"
+      ]
+    },
+    {
+      "tick": 90,
+      "press": [
+        "jump"
+      ]
+    },
+    {
+      "tick": 91,
+      "release": [
+        "jump"
+      ]
+    },
+    {
+      "tick": 138,
+      "press": [
+        "jump"
+      ]
+    },
+    {
+      "tick": 139,
+      "release": [
+        "jump"
+      ]
+    },
+    {
+      "tick": 186,
+      "press": [
+        "jump"
+      ]
+    },
+    {
+      "tick": 187,
+      "release": [
+        "jump"
+      ]
+    },
+    {
+      "tick": 234,
+      "press": [
+        "jump"
+      ]
+    },
+    {
+      "tick": 235,
+      "release": [
+        "jump"
+      ]
+    },
+    {
+      "tick": 282,
+      "press": [
+        "jump"
+      ]
+    },
+    {
+      "tick": 283,
+      "release": [
+        "jump"
+      ]
+    }
+  ]
+}

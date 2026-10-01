@@ -1,0 +1,12 @@
+{
+  "name": "air-strafe-right",
+  "description": "Jump at sprint speed, then hold strafe-right while sweeping the mouse right at 2 deg/tick. Under the Phase-1 Source air model this gains speed.",
+  "tick_rate": 60,
+  "ticks": 150,
+  "start": { "position": [-1500, 0, 0], "yaw": 0 },
+  "events": [
+    { "tick": 0,  "forward": 1, "press": ["sprint"] },
+    { "tick": 60, "press": ["jump"], "forward": 0, "right": 1, "yaw_rate": -2.0 },
+    { "tick": 61, "release": ["jump"] }
+  ]
+}

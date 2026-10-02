@@ -35,7 +35,7 @@ See [`LICENSE-REFERENCES.md`](LICENSE-REFERENCES.md).
 
 ## Pinned Bevy source
 
-`C:\Dev\GameReferencesbevy-0.19.1` is a checkout of tag `v0.19.1`
+`C:\Dev\GameReferences\bevy-0.19.1` is a checkout of tag `v0.19.1`
 (`b56fc29`), the exact version in `Cargo.lock`. Look Bevy APIs up there
 instead of guessing (they change every release). Re-clone at the new tag
 whenever Bevy is bumped.

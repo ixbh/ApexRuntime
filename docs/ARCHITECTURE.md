@@ -27,6 +27,11 @@ crates/
   apex-telemetry   TraceRow, CSV/JSON output, InputScript (sparse, replayable),
                    divergence check, `apex-replay` CLI.                               deps: core, serde
   apex-sandbox     Bevy 0.19 first-person host: mouse look, WASD, HUD, recording.     deps: core, telemetry, bevy
+  apex-tables      TSV/CSV tables, `preflight` (sheet completeness) and
+                   `trace-diff` (golden-trace overlap).                               deps: none
+sheets/            SOURCE OF TRUTH for data: constants.tsv (every tuning number,
+                   with provenance; generates apex-core constants), mechanics.tsv
+                   (coverage: doc/config/impl/tests/telemetry/measured per mechanic)
 adapters/          (empty) future host adapters: iw4l, …
 research/          references/ → junction to C:\Dev\GameReferences (git-ignored)
 scripts/inputs/    input scripts (JSON) for apex-replay
@@ -117,6 +122,20 @@ See [`MOVEMENT-MODEL.md`](MOVEMENT-MODEL.md). New mechanics get **explicit
 `MoveMode` variants** (Slide, Mantle, WallClimb, Zipline) instead of piles
 of flags, so each mode owns its rules and its timing windows.
 
+## Sheets (adapted from "The Spreadsheet Method")
+
+Numbers are data, movement rules are code ("push constants into sheets, keep
+logic in kernels"):
+
+- `sheets/constants.tsv` → `apex-core/build.rs` → `apex_core::sheet::*`
+  consts + `ROWS` with provenance. A malformed row fails the build.
+- `sheets/mechanics.tsv`: one row per target mechanic. A cell is `y`, `n` or `-`;
+  every `n` is unfinished work. `preflight` prints the matrix and checks that
+  the constants sheet and `config.rs` agree. **Run preflight before every commit.**
+- Not adopted: decompiling Apex (conflicts with this project's rules and the
+  method's own legal section), per-row code generation for algorithms, swarm
+  claim boards.
+
 ## Testing strategy
 
 1. **Property tests** (`crates/apex-core/tests/movement.rs`): determinism,
@@ -124,5 +143,7 @@ of flags, so each mode owns its rules and its timing windows.
    These must survive every rules change.
 2. **Rule tests:** placeholder numbers (run speed reached, jump apex = 56 u).
    Update these when rules become measured Apex behaviour.
-3. **Golden traces (next):** input script → expected CSV, compared with
-   `first_divergence`. Later, the expected CSV comes from Apex/R5 captures.
+3. **Golden traces:** `trace-diff reference.csv port.csv` joins on a key
+   and classifies every value as matching / divergent / missing / extra,
+   printing the first divergent tick (fix that one; the rest is cascade).
+   Reference traces come from R5Flowstate `[MOVE-TRACE]` captures.

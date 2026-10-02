@@ -1,0 +1,25 @@
+id	type	value	unit	kind	confidence	build	used	source	notes
+gravity	f32	750	u/s^2	inferred	low	S3	yes	Titanfall/R5 sv_gravity convention	verify: free-air pv.z-v.z = -g*dt in MOVE-TRACE
+jump_height	f32	56	u	sourced	medium	S3	yes	s21-r5sdk mantle_boost.cpp convar doc: S3 player_jumpHeight	medium for S3, low for live
+auto_jump	bool	false	-	placeholder	high	-	yes	Apex has no hold-to-rehop	experiment switch
+run_speed	f32	200	u/s	placeholder	none	-	yes	guess	MOVE-TRACE ms= field gives the real value
+sprint_speed	f32	300	u/s	placeholder	none	-	yes	guess	
+crouch_speed	f32	100	u/s	placeholder	none	-	yes	guess	
+ground_accel	f32	10	1/s	placeholder	low	-	yes	Source sv_accelerate	
+friction	f32	4	1/s	placeholder	low	-	yes	Source sv_friction	
+stop_speed	f32	100	u/s	placeholder	low	-	yes	Source sv_stopspeed	
+air_accel	f32	10	1/s	placeholder	low	-	yes	Source sv_airaccelerate	Apex: per-class airAcceleration
+air_speed_cap	f32	30	u/s	placeholder	low	-	yes	Source air wish cap	Apex: per-class airSpeed
+step_height	f32	18	u	placeholder	low	-	yes	Source	
+walkable_normal_z	f32	0.7	-	placeholder	low	-	yes	Source	
+non_jump_velocity	f32	140	u/s	placeholder	low	-	yes	Source	
+max_velocity	f32	3500	u/s	placeholder	low	-	yes	Source sv_maxvelocity	
+hull_half_width	f32	16	u	placeholder	none	-	yes	Source-like 32x32 hull	
+stand_hull_height	f32	72	u	placeholder	none	-	yes	Source-like	
+crouch_hull_height	f32	48	u	placeholder	none	-	yes	guess	
+stand_eye_height	f32	64	u	placeholder	none	-	yes	guess	
+crouch_eye_height	f32	40	u	placeholder	none	-	yes	guess	
+lurch_speed_cutoff	f32	1100	u/s	sourced	medium	S21	no	s21-r5sdk tapstrafe.cpp: jump_grace_cutoff_speed mirrored by bridge_lurch_cutoff_speed	horizontal speed; S3 had no gate
+superglide_min_traversal_frac	f32	0.5	-	sourced	medium	S21	no	s21-r5sdk mantle_boost.cpp: mantle_boost_min_valid_traversal_frac	
+superglide_sprint_exit_mult	f32	1.5	-	sourced	medium	S21	no	s21-r5sdk mantle_boost.cpp: player_mantleBoostSprintSpeedMultiplier	Sparrow 1.0
+slide_super_jump_window	f32	0.3	s	sourced	medium	S21	no	s21-r5sdk slide_super_jump.cpp	mod-gated, not base movement

@@ -24,12 +24,18 @@ code or assets.
 | `apex-core` | **the movement**: `step(state, input, config, world, dt) -> state`. Depends on nothing else. |
 | `apex-telemetry` | trace rows, CSV/JSON, input scripts, `apex-replay` CLI |
 | `apex-sandbox` | Bevy first-person test bed (the only crate using Bevy) |
+| `apex-tables` | `preflight` (what is unfinished?) and `trace-diff` (does our trace match the reference?) |
+
+All tuning numbers live in `sheets/constants.tsv` and per-mechanic progress in
+`sheets/mechanics.tsv`. The sheets are the source of truth; code is generated
+from or checked against them.
 
 ## Quick start (Windows)
 
 ```powershell
 cd C:\Dev\ApexRuntime
 cargo test --workspace
+cargo run -p apex-tables --bin preflight
 cargo run -p apex-sandbox --release
 cargo run -p apex-telemetry --bin apex-replay -- scripts/inputs/bhop.json --out traces/bhop.csv
 ```

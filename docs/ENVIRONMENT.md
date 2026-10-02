@@ -33,6 +33,13 @@ Cloned to `C:\Dev\GameReferences` (outside the repo). `research/references`
 is a junction to it and is git-ignored.
 See [`LICENSE-REFERENCES.md`](LICENSE-REFERENCES.md).
 
+## Pinned Bevy source
+
+`C:\Dev\GameReferencesbevy-0.19.1` is a checkout of tag `v0.19.1`
+(`b56fc29`), the exact version in `Cargo.lock`. Look Bevy APIs up there
+instead of guessing (they change every release). Re-clone at the new tag
+whenever Bevy is bumped.
+
 ## Everyday commands
 
 ```powershell
@@ -40,6 +47,8 @@ cd C:\Dev\ApexRuntime
 cargo test --workspace                       # all tests (core tests need no GPU)
 cargo run -p apex-sandbox --release          # first-person sandbox window
 cargo run -p apex-telemetry --bin apex-replay -- scripts/inputs/bhop.json --out traces/bhop.csv
+cargo run -p apex-tables --bin preflight      # sheet completeness + constants/config agreement
+cargo run -p apex-tables --bin trace-diff -- ref.csv port.csv   # golden-trace overlap
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all
 ```

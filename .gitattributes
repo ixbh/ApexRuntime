@@ -1,0 +1,3 @@
+# Sheets are parsed byte-for-byte; keep them LF on every OS.
+*.tsv text eol=lf
+*.csv text eol=lf

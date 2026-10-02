@@ -1,0 +1,18 @@
+[package]
+name = "apex-tables"
+description = "Table tooling for ApexRuntime: TSV/CSV loading, sheet preflight, golden-trace comparison."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "preflight"
+path = "src/bin/preflight.rs"
+
+[[bin]]
+name = "trace-diff"
+path = "src/bin/trace_diff.rs"
+
+[lints]
+workspace = true

@@ -6,6 +6,7 @@ members = [
     "crates/apex-core",
     "crates/apex-telemetry",
     "crates/apex-sandbox",
+    "crates/apex-tables",
 ]
 
 [workspace.package]

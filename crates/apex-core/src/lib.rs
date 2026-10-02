@@ -18,6 +18,7 @@ pub mod clock;
 pub mod collide;
 pub mod config;
 pub mod input;
+pub mod sheet;
 pub mod state;
 pub mod step;
 

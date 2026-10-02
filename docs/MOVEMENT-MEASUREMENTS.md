@@ -11,34 +11,18 @@ from *placeholder* only when it has a source, a method and a build.
 Target build for "current Apex": Steam `25522636`,
 `R5pc_r5-301_J44_CL11595978` (v3.0.2.44, 2026-09-23).
 
-## Values in use (`MovementConfig::PLACEHOLDER`)
+## The values themselves: `sheets/constants.tsv`
 
-| quantity | value | kind | source | build | confidence |
-|---|---|---|---|---|---|
-| gravity | 750 u/s² | inferred | Titanfall/R5 `sv_gravity` convention | S3 | low |
-| jump height | 56 u | sourced | Flowstate bridge note: S3 `player_jumpHeight` = 56 | S3 | medium (S3) / low (live) |
-| run speed | 200 u/s | placeholder | – | – | none |
-| sprint speed | 300 u/s | placeholder | – | – | none |
-| crouch speed | 100 u/s | placeholder | – | – | none |
-| ground accel | 10 | placeholder | Source `sv_accelerate` | – | low |
-| friction | 4 | placeholder | Source `sv_friction` | – | low |
-| stop speed | 100 u/s | placeholder | Source `sv_stopspeed` | – | low |
-| air accel | 10 | placeholder | Source `sv_airaccelerate` | – | low |
-| air wish cap | 30 u/s | placeholder | Source | – | low |
-| step height | 18 u | placeholder | Source | – | low |
-| walkable normal z | 0.7 | placeholder | Source | – | low |
-| standing hull | 32×32×72 | placeholder | Source-like | – | none |
-| crouch hull | 32×32×48 | placeholder | – | – | none |
-| eye height stand/crouch | 64 / 40 | placeholder | – | – | none |
+Every number lives in **`sheets/constants.tsv`** (one row per constant:
+`id, type, value, unit, kind, confidence, build, used, source, notes`).
+`apex-core/build.rs` validates it and generates the Rust constants, so the
+sheet *is* the config. This doc does not repeat the values (one source of
+truth). `cargo run -p apex-tables --bin preflight` prints which constants the
+movement currently rests on, grouped by confidence.
 
-## Values known but not yet used
-
-| quantity | value | kind | source | build | confidence |
-|---|---|---|---|---|---|
-| lurch speed cutoff (`jump_grace_cutoff_speed`) | 1100 u/s horizontal | sourced | `s21-r5sdk/src/game/server/tapstrafe.cpp` convar doc | S21 | medium |
-| superglide min traversal progress | 0.5 | sourced | `s21-r5sdk` mantle_boost convar doc | S21 | medium |
-| superglide sprint exit multiplier | 1.5 (Sparrow 1.0) | sourced | same (`player_mantleBoostSprintSpeedMultiplier`) | S21 | medium |
-| slide super-jump window | 0.3 s (mod-gated) | sourced | `slide_super_jump.cpp` | S21 | medium, not base movement |
+To graduate a value: change `value`, set `kind=measured`,
+`confidence`, `build` and a `source` pointing at the trace/clip, then run
+preflight and the tests.
 
 ## Still to measure
 

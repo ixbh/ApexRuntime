@@ -1,16 +1,14 @@
 //! Tuning constants.
 //!
-//! **Every value here is a placeholder until it is backed by a measurement.**
-//! Provenance for each lives in `docs/MOVEMENT-MEASUREMENTS.md`; the tag in
-//! each doc comment is the short form:
-//!
-//! * `[source]` – Source SDK / Quake lineage default. Apex descends from it,
-//!   but Respawn retuned most of these. Confidence: low.
-//! * `[r5-s3]` – appears in R5SDK / Flowstate material describing the Season 3
-//!   build. Confidence: medium for S3, low for current Apex.
-//! * `[guess]` – picked so the sandbox feels sane. Confidence: none.
+//! Values come from `sheets/constants.tsv` (source of truth; generated into
+//! [`crate::sheet`] by `build.rs`). Each sheet row records kind, confidence,
+//! build and source. **Most are still placeholders, not Apex.** The field
+//! tags below are the short form: `[source]` Source/Quake default (low),
+//! `[r5-s3]` R5 Season-3 material (medium for S3), `[guess]` (none).
 
 use apex_math::{Aabb, Vec3};
+
+use crate::sheet;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -60,27 +58,42 @@ pub struct MovementConfig {
 }
 
 impl MovementConfig {
-    /// Phase-1 defaults. Not Apex. See module docs.
+    /// Values from `sheets/constants.tsv` (see [`crate::sheet`]). Most are
+    /// still placeholders, not Apex; each row records its confidence.
     pub const PLACEHOLDER: Self = Self {
-        gravity: 750.0,
-        jump_height: 56.0,
-        auto_jump: false,
-        run_speed: 200.0,
-        sprint_speed: 300.0,
-        crouch_speed: 100.0,
-        ground_accel: 10.0,
-        friction: 4.0,
-        stop_speed: 100.0,
-        air_accel: 10.0,
-        air_speed_cap: 30.0,
-        step_height: 18.0,
-        walkable_normal_z: 0.7,
-        non_jump_velocity: 140.0,
-        max_velocity: 3500.0,
-        stand_hull: Aabb::new(Vec3::new(-16.0, -16.0, 0.0), Vec3::new(16.0, 16.0, 72.0)),
-        crouch_hull: Aabb::new(Vec3::new(-16.0, -16.0, 0.0), Vec3::new(16.0, 16.0, 48.0)),
-        stand_eye_height: 64.0,
-        crouch_eye_height: 40.0,
+        gravity: sheet::GRAVITY,
+        jump_height: sheet::JUMP_HEIGHT,
+        auto_jump: sheet::AUTO_JUMP,
+        run_speed: sheet::RUN_SPEED,
+        sprint_speed: sheet::SPRINT_SPEED,
+        crouch_speed: sheet::CROUCH_SPEED,
+        ground_accel: sheet::GROUND_ACCEL,
+        friction: sheet::FRICTION,
+        stop_speed: sheet::STOP_SPEED,
+        air_accel: sheet::AIR_ACCEL,
+        air_speed_cap: sheet::AIR_SPEED_CAP,
+        step_height: sheet::STEP_HEIGHT,
+        walkable_normal_z: sheet::WALKABLE_NORMAL_Z,
+        non_jump_velocity: sheet::NON_JUMP_VELOCITY,
+        max_velocity: sheet::MAX_VELOCITY,
+        stand_hull: Aabb::new(
+            Vec3::new(-sheet::HULL_HALF_WIDTH, -sheet::HULL_HALF_WIDTH, 0.0),
+            Vec3::new(
+                sheet::HULL_HALF_WIDTH,
+                sheet::HULL_HALF_WIDTH,
+                sheet::STAND_HULL_HEIGHT,
+            ),
+        ),
+        crouch_hull: Aabb::new(
+            Vec3::new(-sheet::HULL_HALF_WIDTH, -sheet::HULL_HALF_WIDTH, 0.0),
+            Vec3::new(
+                sheet::HULL_HALF_WIDTH,
+                sheet::HULL_HALF_WIDTH,
+                sheet::CROUCH_HULL_HEIGHT,
+            ),
+        ),
+        stand_eye_height: sheet::STAND_EYE_HEIGHT,
+        crouch_eye_height: sheet::CROUCH_EYE_HEIGHT,
     };
 
     /// Vertical launch speed that peaks at exactly `height` under `gravity`.

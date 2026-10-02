@@ -5,6 +5,8 @@
 //! hand or by tooling) and a trace produced here from the same input script
 //! must line up column for column, so both use [`TraceRow`].
 
+pub mod flowstate;
+
 use std::io::{self, Write};
 
 use apex_collision::CollisionWorld;

@@ -59,6 +59,7 @@ release the mouse.
 | [`docs/R5-RESEARCH.md`](docs/R5-RESEARCH.md) | where movement lives in R5 (S3 vs S21 vs live) |
 | [`docs/LICENSE-REFERENCES.md`](docs/LICENSE-REFERENCES.md) | licence audit of every reference repo |
 | [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md) | toolchain, installs, everyday commands |
+| [`docs/FLOWSTATE-CAPTURE.md`](docs/FLOWSTATE-CAPTURE.md) | capturing ground-truth movement traces from R5Flowstate, test protocol |
 
 ## Licence
 

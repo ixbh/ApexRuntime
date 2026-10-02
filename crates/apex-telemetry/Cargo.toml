@@ -19,3 +19,7 @@ path = "src/bin/apex_replay.rs"
 
 [lints]
 workspace = true
+
+[[bin]]
+name = "flowstate-trace"
+path = "src/bin/flowstate_trace.rs"

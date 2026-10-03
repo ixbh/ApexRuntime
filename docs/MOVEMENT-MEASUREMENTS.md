@@ -24,6 +24,42 @@ To graduate a value: change `value`, set `kind=measured`,
 `confidence`, `build` and a `source` pointing at the trace/clip, then run
 preflight and the tests.
 
+## Session 1 — R5Flowstate S21 client, 2026-10-02
+
+Local offline match on `mp_rr_district`, `fps_max 60`, `bridge_move_trace 1`,
+18,783 client commands, 10-test protocol (`FLOWSTATE-CAPTURE.md`) split by
+triple-crouch markers (`research/analysis/seg.py`). Raw CSV:
+`traces/flowstate-session1.csv` (local, not committed). All values are in
+`sheets/constants.tsv` with `kind=measured`.
+
+Model-level findings (what Apex does differently from Source):
+
+- **Gravity 750, no air drag.** Per-command dt varies (≈1/60 in groups of
+  3); dt is recoverable in air as `-(pv_z - v_z)/750`.
+- **Jump** v0 = 283.35 u/s (rise 53.5 u), full gravity applied on the jump tick.
+- **Ground acceleration is two-phase:** 3 ticks of +47.9/tick from
+  standstill (to ≈0.72·max), then 517.5 u/s² net to run speed 199.525; sprint
+  then ramps at only ~117 u/s² to 299 (0.8 s).
+- **Friction is a constant 1250 u/s² deceleration** (linear, not
+  exponential) for speeds ≤ 299. Reproduced with Source friction by
+  `friction × stop_speed = 1250`.
+- **Over-speed on ground snaps to 299** within 2–3 ticks; releasing
+  forward while sprinting drops 299 → 120.7 in one tick (unexplained).
+- **Crouch is not instant:** ≈0.38 s down, ≈0.22 s up. Crouch speed 92.
+- **Slide:** +174.4 u/s on start, capped at 460, cooldown ≈2.2–2.6 s, decel
+  ≈ 88.6 u/s² + 0.403·v, ends near 124 u/s.
+- **Bhop:** jumping on the first grounded tick loses 0; each extra sliding
+  tick costs ≈3.4 u/s.
+- **Lurch:** present only early in the air (seen at 0.08–0.12 s, absent from
+  0.32 s). Back press 299 → 82 (k ≈ 0.363 if `lerp(v, |v|·ŵ, k)`); forward taps
+  rotate heading 17–21° with no speed loss (k ≈ 0.5–0.58). Model unresolved:
+  needs a clean A/D test.
+- **Button bits (S21):** 0x2 jump, 0x4 crouch, 0x8 forward, 0x10 back,
+  0x400 side, 0x8000 sprint. The log's `fwd/sd` fields lag the buttons by 1 cmd.
+
+Replay check (test 2, run + stop): 191/211 ticks within 1 u/s of the game;
+the 20 divergent ticks are the unmodelled start kick.
+
 ## Still to measure
 
 walk/run/sprint/crouch speed · ground acceleration curve · friction decay ·

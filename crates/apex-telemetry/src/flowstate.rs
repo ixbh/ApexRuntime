@@ -47,6 +47,9 @@ pub struct MoveTraceLine {
     pub post_origin: [f32; 3],
     pub post_velocity: [f32; 3],
     pub replay: bool,
+    /// Engine clock in seconds from the log prefix (`[186.010]`), if present.
+    /// Differences between consecutive commands give the per-command dt.
+    pub game_time: Option<f64>,
 }
 
 impl MoveTraceLine {
@@ -79,13 +82,20 @@ impl std::error::Error for ParseError {}
 pub fn parse_line(line: &str) -> Result<MoveTraceLine, ParseError> {
     let at = line.find(MARKER).ok_or(ParseError::NoMarker)?;
     let prefix = line[..at].to_ascii_uppercase();
-    let side = if prefix.contains("CLIENT") || prefix.contains("[CL") {
+    let side = if prefix.contains("CLIENT") || prefix.contains("[CL") || prefix.contains("(C)") {
         TraceSide::Client
-    } else if prefix.contains("SERVER") || prefix.contains("[SV") {
+    } else if prefix.contains("SERVER") || prefix.contains("[SV") || prefix.contains("(S)") {
         TraceSide::Server
     } else {
         TraceSide::Unknown
     };
+
+    // "[wall clock] [engine seconds] Native(C):[MOVE-TRACE] ...": take the
+    // last bracketed plain number before the marker.
+    let game_time = line[..at]
+        .split(['[', ']'])
+        .filter_map(|t| t.trim().parse::<f64>().ok())
+        .next_back();
 
     let tokens: Vec<&str> = line[at + MARKER.len()..].split_whitespace().collect();
     // Find "key=first" and return the first value plus following tokens.
@@ -139,6 +149,7 @@ pub fn parse_line(line: &str) -> Result<MoveTraceLine, ParseError> {
         post_origin: vec3("po")?,
         post_velocity: vec3("pv")?,
         replay,
+        game_time,
     })
 }
 
@@ -156,7 +167,7 @@ pub fn parse_log(text: &str) -> (Vec<MoveTraceLine>, usize) {
     (out, bad)
 }
 
-pub const CSV_HEADER: &str = "side,cmd,ent,max_speed,sprint,duck,slide,ground,fwd,side_move,buttons,move_scale,o_x,o_y,o_z,v_x,v_y,v_z,po_x,po_y,po_z,pv_x,pv_y,pv_z,speed_h,replay";
+pub const CSV_HEADER: &str = "side,cmd,ent,max_speed,sprint,duck,slide,ground,fwd,side_move,buttons,move_scale,o_x,o_y,o_z,v_x,v_y,v_z,po_x,po_y,po_z,pv_x,pv_y,pv_z,speed_h,replay,game_time";
 
 pub fn write_csv(lines: &[MoveTraceLine], mut out: impl std::io::Write) -> std::io::Result<()> {
     writeln!(out, "{CSV_HEADER}")?;
@@ -168,7 +179,7 @@ pub fn write_csv(lines: &[MoveTraceLine], mut out: impl std::io::Write) -> std::
         };
         writeln!(
             out,
-            "{side},{},{},{},{},{},{},{},{},{},{:08X},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            "{side},{},{},{},{},{},{},{},{},{},{:08X},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
             l.cmd,
             l.ent,
             l.max_speed,
@@ -193,7 +204,8 @@ pub fn write_csv(lines: &[MoveTraceLine], mut out: impl std::io::Write) -> std::
             l.post_velocity[1],
             l.post_velocity[2],
             l.post_speed_h(),
-            l.replay as u8
+            l.replay as u8,
+            l.game_time.map_or(String::new(), |t| t.to_string())
         )?;
     }
     Ok(())
@@ -217,6 +229,14 @@ mod tests {
         assert_eq!(l.post_velocity, [255.0, 0.0, 0.0]);
         assert!(!l.replay);
         assert!((l.post_speed_h() - 255.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn parses_real_flowstate_prefix() {
+        let l = parse_line("[2026-10-02 22:35:48.383] [186.010] Native(C):[MOVE-TRACE] cmd=12508 ent=1 ms=199.525 spr=0 duck=0 slide=0 ge=1 fwd=0.000 sd=0.000 b=00000000 msc=1.1500 o=-2455.417 -21630.809 6376.045 v=0.000 0.000 0.000 po=-2455.417 -21630.809 6376.045 pv=0.000 0.000 0.000").unwrap();
+        assert_eq!(l.side, TraceSide::Client);
+        assert_eq!(l.game_time, Some(186.010));
+        assert_eq!(l.cmd, 12508);
     }
 
     #[test]

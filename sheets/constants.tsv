@@ -1,13 +1,13 @@
 id	type	value	unit	kind	confidence	build	used	source	notes
-gravity	f32	750	u/s^2	inferred	low	S3	yes	Titanfall/R5 sv_gravity convention	verify: free-air pv.z-v.z = -g*dt in MOVE-TRACE
-jump_height	f32	56	u	sourced	medium	S3	yes	s21-r5sdk mantle_boost.cpp convar doc: S3 player_jumpHeight	medium for S3, low for live
+gravity	f32	750	u/s^2	measured	high	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	per-tick dv/dt with dt from dz: 750.0 on every airborne tick
+jump_height	f32	53.53	u	measured	high	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	v0=283.35 u/s (3 jumps, rise 53.52-53.60); full gravity applied on jump tick
 auto_jump	bool	false	-	placeholder	high	-	yes	Apex has no hold-to-rehop	experiment switch
-run_speed	f32	200	u/s	placeholder	none	-	yes	guess	MOVE-TRACE ms= field gives the real value
-sprint_speed	f32	300	u/s	placeholder	none	-	yes	guess	
-crouch_speed	f32	100	u/s	placeholder	none	-	yes	guess	
-ground_accel	f32	10	1/s	placeholder	low	-	yes	Source sv_accelerate	
-friction	f32	4	1/s	placeholder	low	-	yes	Source sv_friction	
-stop_speed	f32	100	u/s	placeholder	low	-	yes	Source sv_stopspeed	
+run_speed	f32	199.525	u/s	measured	high	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	ms= field and plateau speed
+sprint_speed	f32	299	u/s	measured	high	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	ms= field and plateau speed
+crouch_speed	f32	92	u/s	measured	high	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	crouch-walk plateau
+ground_accel	f32	8.858	1/s	inferred	medium	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	net run accel 517.5 u/s^2 measured; Source applies friction (1250) while accelerating, so gross=(517.5+1250)/199.525. Start kick + sprint ramp (117 u/s^2) NOT modelled: sprint ramps far too fast
+friction	f32	4	1/s	inferred	medium	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	fit: decel is constant 1250 u/s^2 (20.84/tick) for |v|<=299; friction*stop_speed=1250
+stop_speed	f32	312.5	u/s	inferred	medium	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	chosen so Source friction gives constant 1250 u/s^2 up to 312.5 u/s
 air_accel	f32	10	1/s	placeholder	low	-	yes	Source sv_airaccelerate	Apex: per-class airAcceleration
 air_speed_cap	f32	30	u/s	placeholder	low	-	yes	Source air wish cap	Apex: per-class airSpeed
 step_height	f32	18	u	placeholder	low	-	yes	Source	
@@ -23,3 +23,18 @@ lurch_speed_cutoff	f32	1100	u/s	sourced	medium	S21	no	s21-r5sdk tapstrafe.cpp: j
 superglide_min_traversal_frac	f32	0.5	-	sourced	medium	S21	no	s21-r5sdk mantle_boost.cpp: mantle_boost_min_valid_traversal_frac	
 superglide_sprint_exit_mult	f32	1.5	-	sourced	medium	S21	no	s21-r5sdk mantle_boost.cpp: player_mantleBoostSprintSpeedMultiplier	Sparrow 1.0
 slide_super_jump_window	f32	0.3	s	sourced	medium	S21	no	s21-r5sdk slide_super_jump.cpp	mod-gated, not base movement
+ground_start_kick	f32	2875	u/s^2	measured	high	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	first 3 ticks from standstill: +47.9/tick until ~0.72*ms
+sprint_ramp_accel	f32	117	u/s^2	measured	high	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	run->sprint: ~+1.95/tick from ~207 to 299 (0.8 s)
+ground_overspeed_snap	f32	299	u/s	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	landing above sprint speed snaps to 299 within 2-3 ticks; sprint->release drop 299->120.7 in one tick unexplained
+air_drag	f32	0	1/s	measured	high	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	horizontal speed constant in air with no input
+crouch_in_time	f32	0.383	s	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	duck state 1->2 in 23 ticks
+crouch_out_time	f32	0.217	s	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	duck state 3->0 in 13 ticks
+slide_boost	f32	174.4	u/s	measured	high	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	added on slide start; 5 uncapped samples
+slide_boost_cap	f32	460	u/s	measured	high	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	boosted speed capped at 460
+slide_boost_cooldown	f32	2.4	s	measured	low	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	no boost at 2.17 s, boost at 2.57 s since previous slide start
+slide_decel_const	f32	88.6	u/s^2	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	fit decel = c + k*v on flat (n=505, sd 0.67/tick)
+slide_decel_linear	f32	0.403	1/s	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	see slide_decel_const
+slide_end_speed	f32	124	u/s	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	slide ends ~122-124 u/s on flat
+lurch_strength	f32	0.363	-	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	back press <=0.12 s after takeoff: 299->82 = |1-2k|; forward taps fit k~0.5-0.58: model unresolved
+lurch_window	f32	0.2	s	measured	low	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	lurch at 0.084-0.117 s, none at >=0.317 s; bounds 0.12-0.32
+bhop_ground_tick_loss	f32	3.4	u/s	measured	high	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	per extra grounded tick while sliding; 1-tick bhop loses 0

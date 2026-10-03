@@ -65,3 +65,8 @@ Same setup; copy `platform/logs/client/<session>/message*.log` to
 | 8 | standing bhop chain (no crouch) x6 hops, rest 5 s, repeat | jump fatigue (standing) |
 | 9 | slide-jump chain x6, rest 5 s, then ONE slide-jump | jump fatigue (slide) + fresh slide-jump speed |
 | 10 | single jump after 2 s / 1 s / 0.5 s rest (3 each) | fatigue recovery curve |
+| 11 | standing still: spam jump as fast as possible x8 (no crouch), rest 5 s | jump fatigue baseline, no movement |
+| 12 | standing still: hold crouch the whole time and spam jump x8, rest 5 s | crouch-held jump fatigue (differs from 11) |
+| 13 | sprinting: hold crouch and spam jump x8 | crouch-held jump spam while moving (slide/jump interaction) |
+
+Jump fatigue is NOT implemented until tests 8-13 are analysed together.

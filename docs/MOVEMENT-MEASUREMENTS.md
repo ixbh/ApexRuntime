@@ -60,6 +60,25 @@ Model-level findings (what Apex does differently from Source):
 Replay check (test 2, run + stop): 191/211 ticks within 1 u/s of the game;
 the 20 divergent ticks are the unmodelled start kick.
 
+## Sessions 2–3 — lurch at 60 fps, then 60 vs 144 fps (2026-10-02)
+
+Same match, logs rotate at 10 MB (keep copies: `traces/raw/`).
+
+- **Frame-rate independent:** start kick (~2,890 u/s² until ≈143 u/s; 3
+  ticks at 60 fps, 7 at 144), run accel (517 u/s² net), friction (1250 u/s²),
+  lurch per press.
+- **Frame-rate dependent: jump.** V = √(2·750·56) = 289.8; on the jump tick
+  position advances (V − g·dt)·dt and v_z ends at V − 1.5·g·dt. Rise 53.5 @60,
+  55.0 @144. Implemented in `apex-core` and pinned by
+  `jump_rise_matches_flowstate_at_60_and_144_fps`.
+- **Lurch:** fires on each *new* directional press while airborne (keys
+  held at takeoff don't). Turns horizontal velocity toward the wish direction
+  keeping speed (except a loss window ~0.15–0.25 s). Strength profile above in
+  `lurch_strength` / `lurch_window`. Camera yaw is not in the log, so wish
+  angles are inferred (mouse held still → wish ⟂ velocity for A/D).
+- **Air strafe:** ~8.3 u/s perpendicular per 60 fps tick with mouse moving;
+  ~0 with D held and camera fixed after a lurch (Source capped-wish behaviour).
+
 ## Still to measure
 
 lurch (clean A/D taps at fixed times after takeoff; exact window and

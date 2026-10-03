@@ -111,45 +111,39 @@ fn friction_brings_player_to_rest() {
     assert_eq!(s.velocity, Vec3::ZERO);
 }
 
-#[test]
-fn jump_apex_matches_configured_height() {
+/// Simulated jump rise at a given step length.
+fn jump_rise(dt: f32) -> f32 {
     let w = flat();
     let cfg = MovementConfig::default();
     let mut s = settled(&w, &cfg, Vec3::ZERO);
     let ground_z = s.position.z;
     let mut peak = ground_z;
-    let mut landed_tick = None;
-    for t in 0..200 {
+    for t in 0..2000 {
         let input = if t == 0 {
             MovementInput::default().with_buttons(Buttons::JUMP)
         } else {
             MovementInput::default()
         };
-        let (next, rep) = step_with_report(&s, &input, &cfg, &w, DT);
-        if t == 0 {
-            assert!(rep.jumped);
-        }
+        let (next, rep) = step_with_report(&s, &input, &cfg, &w, dt);
+        assert!(t != 0 || rep.jumped);
         s = next;
         peak = peak.max(s.position.z);
         if t > 0 && rep.landed {
-            landed_tick = Some(t);
-            break;
+            return peak - ground_z;
         }
     }
-    // Split-gravity integration is exact for a parabola sampled at tick
-    // boundaries; the discrete peak can only undershoot by < one tick of rise.
-    let rise = peak - ground_z;
-    assert!(
-        rise <= cfg.jump_height + 0.01 && rise > cfg.jump_height - 1.0,
-        "rise {rise}"
-    );
-    // Air time ≈ 2 v0 / g.
-    let expected_ticks = 2.0 * cfg.jump_speed(cfg.jump_height) / cfg.gravity / DT;
-    let landed = landed_tick.expect("should land") as f32;
-    assert!(
-        (landed - expected_ticks).abs() <= 2.0,
-        "landed {landed} expected {expected_ticks}"
-    );
+    panic!("never landed");
+}
+
+#[test]
+fn jump_rise_matches_flowstate_at_60_and_144_fps() {
+    // Golden values from the R5Flowstate S21 client (session 2026-10-02):
+    // 3 jumps each, rise 53.52-53.60 at fps_max 60, 54.998-55.013 at 144.
+    let r60 = jump_rise(1.0 / 60.0);
+    let r144 = jump_rise(1.0 / 144.0);
+    assert!((r60 - 53.55).abs() < 0.3, "60 fps rise {r60}");
+    assert!((r144 - 55.0).abs() < 0.3, "144 fps rise {r144}");
+    assert!(r144 > r60, "higher fps must jump higher");
 }
 
 #[test]

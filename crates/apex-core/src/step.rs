@@ -95,7 +95,11 @@ pub fn step_with_report(
     let wants_jump =
         pressed.contains(Buttons::JUMP) || (cfg.auto_jump && input.buttons.contains(Buttons::JUMP));
     if s.on_ground() && wants_jump {
-        s.velocity.z = cfg.jump_speed(cfg.jump_height);
+        // Apex removes an extra half tick of gravity on the jump tick: with the
+        // air move's split gravity below, the position advances by
+        // (V - g*dt)*dt and the tick ends at V - 1.5*g*dt. Measured on the S21
+        // client at 60 and 144 fps (rise 53.5 vs 55.0); higher fps jumps higher.
+        s.velocity.z = cfg.jump_speed(cfg.jump_height) - 0.5 * cfg.gravity * dt;
         s.mode = MoveMode::Air;
         s.ground_normal = Vec3::ZERO;
         rep.jumped = true;

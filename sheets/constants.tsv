@@ -1,6 +1,6 @@
 id	type	value	unit	kind	confidence	build	used	source	notes
 gravity	f32	750	u/s^2	measured	high	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	per-tick dv/dt with dt from dz: 750.0 on every airborne tick
-jump_height	f32	53.53	u	measured	high	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	v0=283.35 u/s (3 jumps, rise 53.52-53.60); full gravity applied on jump tick
+jump_height	f32	56	u	measured	high	S21	yes	Flowstate S21 MOVE-TRACE 60+144 fps, 2026-10-02 (matches S3 player_jumpHeight)	V=sqrt(2*750*56)=289.8; jump tick ends at V-1.5*g*dt (pos uses V-g*dt) -> rise 53.5 @60fps, 55.0 @144fps
 auto_jump	bool	false	-	placeholder	high	-	yes	Apex has no hold-to-rehop	experiment switch
 run_speed	f32	199.525	u/s	measured	high	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	ms= field and plateau speed
 sprint_speed	f32	299	u/s	measured	high	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	ms= field and plateau speed
@@ -35,8 +35,9 @@ slide_boost_cooldown	f32	2.4	s	measured	low	S21	no	Flowstate S21 client MOVE-TRA
 slide_decel_const	f32	88.6	u/s^2	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	fit decel = c + k*v on flat (n=505, sd 0.67/tick)
 slide_decel_linear	f32	0.403	1/s	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	see slide_decel_const
 slide_end_speed	f32	124	u/s	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	slide ends ~122-124 u/s on flat
-lurch_strength	f32	0.44	-	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session2 2026-10-02 (A/D/W-scroll taps)	per NEW airborne press: horizontal velocity dir = normalize(lerp(v_hat, wish_hat, k)), speed kept for turns <~35 deg; W-scroll gap ratio 0.53-0.57 constant over 0.13-0.43 s. Large turns (~45 deg) lose 3-11% speed; early back-press (session1) much harsher: unresolved
-lurch_window	f32	0.45	s	measured	low	S21	no	Flowstate S21 client MOVE-TRACE session2 2026-10-02 (A/D/W-scroll taps)	lurch seen from first airborne tick (0.000 s) to >=0.433 s with no decay; end of window not yet observed. Keys held at takeoff never lurch
+lurch_strength	f32	0.48	-	measured	medium	S21	no	Flowstate S21 MOVE-TRACE sessions 2+3 (60 & 144 fps A/D taps), 2026-10-02	peak k for normalize(lerp(v_hat,wish_hat,k)) assuming wish 90deg off velocity: ~0.38 at 0-0.05 s, ~0.48 at 0.23-0.29 s, 0.25 @0.38, 0.15 @0.43, 0.06 @0.47, 0 @>=0.52. Same per press at 60 and 144 fps
+lurch_window	f32	0.5	s	measured	medium	S21	no	Flowstate S21 MOVE-TRACE sessions 2+3 (60 & 144 fps A/D taps), 2026-10-02	strength fades roughly linearly from ~0.29 s to 0 at ~0.50 s after takeoff; only presses made while airborne count
 bhop_ground_tick_loss	f32	3.4	u/s	measured	high	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	per extra grounded tick while sliding; 1-tick bhop loses 0
 air_strafe_accel	f32	500	u/s^2	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session2 2026-10-02 (A/D/W-scroll taps)	A held, mouse moving: ~8.3 u/s perpendicular per tick; D held after a lurch with fixed camera: ~0 (Source capped-wish behaviour)
 button_bits	f32	0	-	sourced	high	S21	no	Flowstate S21 client MOVE-TRACE session2 2026-10-02 (A/D/W-scroll taps)	not a number: 0x2 jump, 0x4 crouch, 0x8 fwd, 0x10 back, 0x200 right(D), 0x400 left(A), 0x8000 sprint
+lurch_speed_loss_window	f32	0.25	s	measured	low	S21	no	Flowstate S21 MOVE-TRACE sessions 2+3 (60 & 144 fps A/D taps), 2026-10-02	some presses at 0.15-0.24 s lose 7-32 u/s (299->273 typical); none at 0-0.05 s or >=0.28 s; early back-press (<=0.12 s) 299->82. Unresolved

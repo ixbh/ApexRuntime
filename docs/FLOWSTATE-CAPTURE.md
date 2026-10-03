@@ -47,3 +47,21 @@ Lock FPS first (`fps_max 60`, then repeat key tests at 144) so per-command dt is
 | T10 | bhop chain ×5 | speed preservation across hops |
 
 Gravity and dt can be cross-checked: in free air `pv.z − v.z = −g·dt`.
+
+## Session 4 protocol (mantle, superglide, wall climb, fatigue)
+
+Same setup; copy `platform/logs/client/<session>/message*.log` to
+`traces/raw/` right after (logs rotate at 10 MB and the oldest is deleted).
+
+| # | test | measures |
+|---|---|---|
+| 1 | mantle onto one ledge, then STOP and check the log | does MOVE-TRACE log during TraversalMove? |
+| 2 | mantle 3-4 ledge heights (waist/chest/head/max), 2 each, walking + sprinting | mantle height range, duration, exit speed |
+| 3 | 10+ superglide attempts on one ledge (count your successes); repeat at fps_max 144 | superglide window, boost, fps dependence |
+| 4 | sprint into a tall wall, hold W until the climb ends, x3 | wall-climb speed/height/duration |
+| 5 | climb, jump off mid-climb, x3 | wall bounce |
+| 6 | slide from walk (no sprint), half speed, sprint, x2 each | slide start threshold |
+| 7 | slide-jump, land holding W without crouch, x3 | landing over-speed snap |
+| 8 | standing bhop chain (no crouch) x6 hops, rest 5 s, repeat | jump fatigue (standing) |
+| 9 | slide-jump chain x6, rest 5 s, then ONE slide-jump | jump fatigue (slide) + fresh slide-jump speed |
+| 10 | single jump after 2 s / 1 s / 0.5 s rest (3 each) | fatigue recovery curve |

@@ -5,7 +5,12 @@
 //! the resulting state. Nothing in the movement depends on Bevy.
 //!
 //! Controls: mouse look · WASD · Space jump · Ctrl/C crouch · Shift sprint
-//!           F1 HUD · F5 start/stop recording · R respawn · Esc release mouse
+//!           scroll up = tap W · scroll down = tap jump (Apex-style binds)
+//!           F1 HUD · F2 always-sprint · F5 start/stop recording · R respawn
+//!           Esc release mouse
+//!
+//! Scroll notches become one-tick presses with a release tick between them,
+//! so every notch is a *new* press (what lurch / tap-strafing keys off).
 
 mod brush_mesh;
 
@@ -17,9 +22,12 @@ use apex_core::{
     Buttons, FixedClock, MovementConfig, MovementInput, MovementState, StepReport, step_with_report,
 };
 use apex_telemetry::{InputEvent, InputScript, ScriptStart, TraceRow, write_csv};
-use bevy::input::mouse::AccumulatedMouseMotion;
+use bevy::input::mouse::{AccumulatedMouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
+
+/// Most scroll notches queued at once (a fast flick should not keep pressing for seconds).
+const MAX_QUEUED_NOTCHES: u32 = 8;
 
 /// Source units (inches, Z-up) -> Bevy (metres, Y-up). A proper rotation, so
 /// mesh winding survives the conversion.
@@ -73,6 +81,15 @@ struct Sim {
     /// A jump press survives until a tick consumes it, so a tap shorter than
     /// one tick is never lost between render frames.
     jump_latch: bool,
+    /// Scroll-wheel notches waiting to be turned into one-tick presses.
+    scroll_fwd_pending: u32,
+    scroll_jump_pending: u32,
+    /// The previous tick was a scroll pulse, so this one must be a release.
+    fwd_pulse_last: bool,
+    jump_pulse_last: bool,
+    auto_sprint: bool,
+    /// Last lurch (strength, tick) so the HUD can show it for longer than a tick.
+    last_lurch: (f32, u64),
     recording: Option<Recording>,
     hud_visible: bool,
 }
@@ -100,6 +117,12 @@ impl Sim {
             yaw: 0.0,
             pitch: 0.0,
             jump_latch: false,
+            scroll_fwd_pending: 0,
+            scroll_jump_pending: 0,
+            fwd_pulse_last: false,
+            jump_pulse_last: false,
+            auto_sprint: true,
+            last_lurch: (0.0, 0),
             recording: None,
             hud_visible: true,
         }
@@ -241,21 +264,33 @@ fn look(
     sim.pitch = (sim.pitch + d.y * MOUSE_DEG_PER_COUNT).clamp(-89.0, 89.0);
 }
 
-fn sample_input(keys: &ButtonInput<KeyCode>, sim: &Sim) -> MovementInput {
+fn sample_input(
+    keys: &ButtonInput<KeyCode>,
+    sim: &Sim,
+    fwd_pulse: bool,
+    jump_pulse: bool,
+) -> MovementInput {
     let axis =
         |pos: KeyCode, neg: KeyCode| (keys.pressed(pos) as i32 - keys.pressed(neg) as i32) as f32;
     let mut buttons = Buttons::NONE;
     buttons.set(
         Buttons::JUMP,
-        keys.pressed(KeyCode::Space) || sim.jump_latch,
+        keys.pressed(KeyCode::Space) || sim.jump_latch || jump_pulse,
     );
     buttons.set(
         Buttons::CROUCH,
         keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::KeyC),
     );
-    buttons.set(Buttons::SPRINT, keys.pressed(KeyCode::ShiftLeft));
+    buttons.set(
+        Buttons::SPRINT,
+        sim.auto_sprint || keys.pressed(KeyCode::ShiftLeft),
+    );
+    let mut forward = axis(KeyCode::KeyW, KeyCode::KeyS);
+    if fwd_pulse && forward <= 0.0 {
+        forward += 1.0;
+    }
     MovementInput {
-        forward: axis(KeyCode::KeyW, KeyCode::KeyS),
+        forward,
         right: axis(KeyCode::KeyD, KeyCode::KeyA),
         buttons,
         yaw: sim.yaw,
@@ -263,18 +298,49 @@ fn sample_input(keys: &ButtonInput<KeyCode>, sim: &Sim) -> MovementInput {
     }
 }
 
-fn simulate(time: Res<Time>, keys: Res<ButtonInput<KeyCode>>, mut sim: ResMut<Sim>) {
+fn simulate(
+    time: Res<Time>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut wheel: MessageReader<MouseWheel>,
+    mut sim: ResMut<Sim>,
+) {
     if keys.just_pressed(KeyCode::Space) {
         sim.jump_latch = true;
     }
+    for ev in wheel.read() {
+        // Line units are notches; pixel units (touchpads) count as one notch.
+        let notches = match ev.unit {
+            MouseScrollUnit::Line => ev.y.abs().round().max(1.0) as u32,
+            MouseScrollUnit::Pixel => 1,
+        };
+        if ev.y > 0.0 {
+            sim.scroll_fwd_pending = (sim.scroll_fwd_pending + notches).min(MAX_QUEUED_NOTCHES);
+        } else if ev.y < 0.0 {
+            sim.scroll_jump_pending = (sim.scroll_jump_pending + notches).min(MAX_QUEUED_NOTCHES);
+        }
+    }
     let ticks = sim.clock.advance(time.delta_secs_f64());
     for _ in 0..ticks {
-        let input = sample_input(&keys, &sim);
+        let fwd_pulse = sim.scroll_fwd_pending > 0 && !sim.fwd_pulse_last;
+        if fwd_pulse {
+            sim.scroll_fwd_pending -= 1;
+        }
+        sim.fwd_pulse_last = fwd_pulse;
+        let jump_pulse = sim.scroll_jump_pending > 0 && !sim.jump_pulse_last;
+        if jump_pulse {
+            sim.scroll_jump_pending -= 1;
+        }
+        sim.jump_pulse_last = jump_pulse;
+
+        let input = sample_input(&keys, &sim, fwd_pulse, jump_pulse);
         let dt = sim.clock.dt();
         let (next, rep) = step_with_report(&sim.cur, &input, &sim.cfg, &sim.world, dt);
         sim.prev = sim.cur;
         sim.cur = next;
         sim.last_report = rep;
+        if rep.lurch_k > 0.0 {
+            sim.last_lurch = (rep.lurch_k, next.tick);
+        }
         sim.last_input = input;
         sim.jump_latch = false;
         if let Some(rec) = sim.recording.as_mut() {
@@ -334,8 +400,10 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
          view      yaw {:7.2}  pitch {:6.2}\n\
          wish      {:6.1} u/s   accel +{:.2}  friction -{:.2}\n\
          air {:.3}s ground {:.3}s {}\n\
+         last lurch k {:.2} ({} ticks ago)   slide boost {}\n\
+         always-sprint {} (F2)   scroll: up = W tap, down = jump\n\
          {}\n\
-         [placeholder Source-lineage rules, not Apex yet]",
+         [Apex S21 rules where measured; see sheets/constants.tsv]",
         s.tick,
         s.mode_name(),
         if s.crouched { " (crouched)" } else { "" },
@@ -359,6 +427,17 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
         s.time_in_air,
         s.time_on_ground,
         if r.hit_wall { "WALL" } else { "" },
+        sim.last_lurch.0,
+        s.tick.saturating_sub(sim.last_lurch.1),
+        if s.time_since_slide_boost >= sim.cfg.slide_boost_cooldown {
+            "ready".to_owned()
+        } else {
+            format!(
+                "in {:.1}s",
+                sim.cfg.slide_boost_cooldown - s.time_since_slide_boost
+            )
+        },
+        if sim.auto_sprint { "ON" } else { "OFF" },
         rec,
     );
 }
@@ -366,6 +445,9 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
 fn hotkeys(keys: Res<ButtonInput<KeyCode>>, mut sim: ResMut<Sim>) {
     if keys.just_pressed(KeyCode::F1) {
         sim.hud_visible = !sim.hud_visible;
+    }
+    if keys.just_pressed(KeyCode::F2) {
+        sim.auto_sprint = !sim.auto_sprint;
     }
     if keys.just_pressed(KeyCode::KeyR) {
         let s = MovementState::at(SPAWN);

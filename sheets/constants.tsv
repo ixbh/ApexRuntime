@@ -35,6 +35,8 @@ slide_boost_cooldown	f32	2.4	s	measured	low	S21	no	Flowstate S21 client MOVE-TRA
 slide_decel_const	f32	88.6	u/s^2	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	fit decel = c + k*v on flat (n=505, sd 0.67/tick)
 slide_decel_linear	f32	0.403	1/s	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	see slide_decel_const
 slide_end_speed	f32	124	u/s	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	slide ends ~122-124 u/s on flat
-lurch_strength	f32	0.363	-	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	back press <=0.12 s after takeoff: 299->82 = |1-2k|; forward taps fit k~0.5-0.58: model unresolved
-lurch_window	f32	0.2	s	measured	low	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	lurch at 0.084-0.117 s, none at >=0.317 s; bounds 0.12-0.32
+lurch_strength	f32	0.44	-	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session2 2026-10-02 (A/D/W-scroll taps)	per NEW airborne press: horizontal velocity dir = normalize(lerp(v_hat, wish_hat, k)), speed kept for turns <~35 deg; W-scroll gap ratio 0.53-0.57 constant over 0.13-0.43 s. Large turns (~45 deg) lose 3-11% speed; early back-press (session1) much harsher: unresolved
+lurch_window	f32	0.45	s	measured	low	S21	no	Flowstate S21 client MOVE-TRACE session2 2026-10-02 (A/D/W-scroll taps)	lurch seen from first airborne tick (0.000 s) to >=0.433 s with no decay; end of window not yet observed. Keys held at takeoff never lurch
 bhop_ground_tick_loss	f32	3.4	u/s	measured	high	S21	no	Flowstate S21 client MOVE-TRACE session1 2026-10-02	per extra grounded tick while sliding; 1-tick bhop loses 0
+air_strafe_accel	f32	500	u/s^2	measured	medium	S21	no	Flowstate S21 client MOVE-TRACE session2 2026-10-02 (A/D/W-scroll taps)	A held, mouse moving: ~8.3 u/s perpendicular per tick; D held after a lurch with fixed camera: ~0 (Source capped-wish behaviour)
+button_bits	f32	0	-	sourced	high	S21	no	Flowstate S21 client MOVE-TRACE session2 2026-10-02 (A/D/W-scroll taps)	not a number: 0x2 jump, 0x4 crouch, 0x8 fwd, 0x10 back, 0x200 right(D), 0x400 left(A), 0x8000 sprint

@@ -41,6 +41,8 @@ pub struct TraceRow {
     pub jumped: bool,
     pub landed: bool,
     pub hit_wall: bool,
+    pub lurch_k: f32,
+    pub time_in_air: f32,
 }
 
 impl TraceRow {
@@ -57,7 +59,7 @@ impl TraceRow {
             vel_y: s.velocity.y,
             vel_z: s.velocity.z,
             speed_h: s.horizontal_speed(),
-            mode: s.mode.name().to_owned(),
+            mode: s.mode_name().to_owned(),
             crouched: s.crouched,
             in_forward: input.forward,
             in_right: input.right,
@@ -70,11 +72,13 @@ impl TraceRow {
             jumped: rep.jumped,
             landed: rep.landed,
             hit_wall: rep.hit_wall,
+            lurch_k: rep.lurch_k,
+            time_in_air: s.time_in_air,
         }
     }
 }
 
-pub const CSV_HEADER: &str = "tick,time,dt,pos_x,pos_y,pos_z,vel_x,vel_y,vel_z,speed_h,mode,crouched,in_forward,in_right,in_buttons,yaw,pitch,wish_speed,accel_added,friction_drop,jumped,landed,hit_wall";
+pub const CSV_HEADER: &str = "tick,time,dt,pos_x,pos_y,pos_z,vel_x,vel_y,vel_z,speed_h,mode,crouched,in_forward,in_right,in_buttons,yaw,pitch,wish_speed,accel_added,friction_drop,jumped,landed,hit_wall,lurch_k,time_in_air";
 
 /// Write rows as CSV. Floats use Rust's shortest round-trip formatting, so the
 /// CSV reproduces the exact f32 bits when parsed back.
@@ -83,7 +87,7 @@ pub fn write_csv(rows: &[TraceRow], mut out: impl Write) -> io::Result<()> {
     for r in rows {
         writeln!(
             out,
-            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
             r.tick,
             r.time,
             r.dt,
@@ -106,7 +110,9 @@ pub fn write_csv(rows: &[TraceRow], mut out: impl Write) -> io::Result<()> {
             r.friction_drop,
             r.jumped as u8,
             r.landed as u8,
-            r.hit_wall as u8
+            r.hit_wall as u8,
+            r.lurch_k,
+            r.time_in_air
         )?;
     }
     Ok(())

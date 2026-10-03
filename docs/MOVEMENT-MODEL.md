@@ -69,40 +69,68 @@ boundaries. Jump apex = `v₀²/2g` = h exactly; tested. Airtime is `2v₀/g`
 - **Stick to ground:** after a ground move, snap down up to 18 u to the
   floor if there is one (walk down stairs/slopes without going airborne).
 
-## Planned Apex mechanics (hypotheses to test)
+## Apex rules implemented (fitted to R5Flowstate S21 traces)
 
-These are **models to fit against measurements**, written so the parameters
-are named and measurable. None is implemented yet.
+All numbers live in `sheets/constants.tsv`; golden tests in
+`crates/apex-core/tests/apex_golden.rs`. Replays of the recorded run,
+sprint and slide tests match the game on every tick (`research/analysis/`).
+
+### Ground acceleration (net rates, fps-independent)
+
+```text
+net = 2875        if |v| < 0.72·run_speed   (start kick)
+      517.5       if |v| < run_speed (199.525)
+      115         otherwise (run → sprint 299 ramp)
+amount = net·dt + friction_removed_this_tick      // rates are measured net of friction
+v += ŵ · min(amount, W − v·ŵ)
+```
+
+### Friction
+Constant deceleration 1250 u/s² (Source friction with friction·stop_speed =
+1250), ×1.2 = 1500 u/s² when fully crouched.
+
+### Jump (fps-dependent)
+V = √(2·750·56) = 289.8. On the jump tick v_z is set to V − ½g·dt before the
+split-gravity air move, so the position advances (V − g·dt)·dt and the tick
+ends at V − 1.5·g·dt. Rise: 53.5 @60 fps, 55.0 @144 fps.
+
+### Crouch
+Ground: `crouch_frac` 0→1 in 0.383 s, 1→0 in 0.217 s; max speed blends
+run/sprint → 92; crouched hull once fully down; standing needs headroom.
+Air: instant.
+
+### Slide
+Entry: on ground, crouch held and newly pressed (or just landed), |v| ≥
+`slide_start_min_speed` (placeholder 110). Boost +174.4 capped at 460, not
+again within 2.4 s. While sliding: no friction/accel, decel = 98.9 + 0.3556·|v|
+u/s². Ends when crouch is released or |v| < 125. Jumping out and landing with
+crouch held re-enters the slide (slide-hop), usually without boost.
 
 ### Lurch (the basis of tap-strafing)
 
-Known (R5 research): triggered by a **new press** of a direction key while
-airborne. S21 skips it above 1100 u/s horizontal speed. Some states suppress
-it (superglide boost, cannon flight). It is part of `AirMove`, not a separate
-"tap-strafe" feature.
-
-Working model:
-
 ```text
-on directional press edge, airborne, |v_h| ≤ v_cut, t_air ≤ T_lurch:
-    k   = L_max · decay(t_air / T_lurch)          // strength fades after leaving ground
-    v_h ← |v_h| · (1 − ρ·k) · normalize( lerp(v̂_h, ŵ, k) )
+on a NEW directional press while airborne (keys held at takeoff don't count),
+if |v_h| ≤ 1100:
+    t   = time since the first airborne tick (jump tick = 0)
+    k   = 0.492                          t ≤ 0.278
+          0.492·(0.498 − t)/(0.220)      0.278 < t < 0.498
+          0                              otherwise
+    v_h ← |v_h| · normalize((1 − k)·v̂_h + k·ŵ)      // turn, keep speed
+    (no normal air acceleration on this tick)
 ```
 
-Parameters to measure: `T_lurch` (window), `L_max` (max redirect fraction),
-`decay` shape, `ρ` (speed cost), `v_cut` = 1100 (S21; check live). It must
-work per press edge, so many presses in a short window (scroll-wheel forward
-binds) compound. That compounding is what tap-strafing *is*. Frame-rate
-dependence: if `k` is applied per usercmd rather than per second, high FPS
-changes the result. Test that explicitly.
+Same per press at 60 and 144 fps. Tap-strafing with a scroll-bound forward is
+many presses, each lurching toward the camera. Within ~1° of 27 recorded
+presses. **Unresolved:** presses made while W is still held from the sprint
+turn more than the model (k ≈ 0.6–0.7 for a 45° wish); a speed loss seen on
+some presses at 0.15–0.25 s; the very early back-press 299 → 82 (session 1).
 
-### Slide
+### Air control
+Source air acceleration with `air_accel` 2.48 (×199.525 air max speed =
+495 u/s²) and wish cap 70 u/s: holding A/D with a fixed camera gains until
+v·ŵ = 70, then nothing; moving the mouse keeps ŵ ahead of v (air strafing).
 
-Enter: crouch while sprinting above a speed threshold. Gets an entry boost
-(`slideSpeedBoost`, capped by `slideSpeedBoostCap`, cooldown
-`player_slideBoostCooldown`). Reduced friction, steered by gravity on slopes.
-Exit below a speed or on release. **Slide jump** = jump during a slide;
-friction does not apply on the jump tick (same as a bhop).
+## Still hypotheses
 
 ### Mantle and superglide
 

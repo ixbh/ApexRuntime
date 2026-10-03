@@ -47,13 +47,32 @@ pub struct MovementState {
     /// timing windows (jump buffering, coyote time, superglide).
     pub time_in_air: f32,
     pub time_on_ground: f32,
+    /// Crouch progress 0 (standing) .. 1 (fully crouched).
+    pub crouch_frac: f32,
+    /// On the ground in a slide.
+    pub sliding: bool,
+    /// Seconds since the last slide boost (starts "ready").
+    pub time_since_slide_boost: f32,
+    /// Movement axes on the previous tick (for directional press edges → lurch).
+    pub prev_forward: f32,
+    pub prev_right: f32,
 }
 
 impl MovementState {
     pub fn at(position: Vec3) -> Self {
         Self {
             position,
+            time_since_slide_boost: f32::MAX,
             ..Self::default()
+        }
+    }
+
+    /// "air", "ground" or "slide".
+    pub fn mode_name(&self) -> &'static str {
+        if self.sliding {
+            "slide"
+        } else {
+            self.mode.name()
         }
     }
 

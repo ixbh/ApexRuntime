@@ -1,16 +1,16 @@
 id	phase	doc	config	impl	tests	telemetry	measured	notes
-ground_accel	3.1	y	y	y	y	y	y	measured: 3-tick kick + 517 u/s^2 + sprint ramp; impl is plain Source accel
-friction	3.2	y	y	y	y	y	y	measured constant 1250 u/s^2; reproduced via stop_speed fit
+ground_accel	3.1	y	y	y	y	y	y	kick 2875 / run 517.5 / sprint ramp 115 (net, fps-independent); replay of run+sprint tests matches every tick
+friction	3.2	y	y	y	y	y	y	1250 standing, 1500 crouched; replay exact
 jump	3.3	y	y	y	y	y	y	Apex jump-tick rule implemented; matches 60 and 144 fps rise
 gravity	3.3	y	y	y	y	y	y	
-air_accel	3.4	y	y	y	n	y	y	no dedicated test yet
+air_accel	3.4	y	y	y	y	y	y	Source air accel fitted: 2.48 x 199.5 = 495 u/s^2, cap 70; matches 60+144 fps
 velocity_preservation	3.5	y	-	y	y	y	y	jump before friction
 bhop	3.6	y	-	y	y	y	y	
-crouch	3.7	y	y	y	y	y	y	speed measured; 0.38 s in / 0.22 s out transition not implemented
-slide	3.8	y	n	n	n	n	y	fully measured (boost, cap, cooldown, decel, end speed); not implemented
-slide_jump	3.9	y	n	n	n	n	n	
-lurch	3.10	y	n	n	n	n	y	measured at 60+144 fps: per-press, speed-keeping, k peaks ~0.48 at 0.25 s, gone by 0.5 s; speed-loss window unresolved
-tap_strafe	3.11	y	-	n	n	n	y	emerges from lurch; no own rules
+crouch	3.7	y	y	y	y	y	y	timed 0.38 s down / 0.22 s up on ground, instant in air; speed blends by crouch_frac
+slide	3.8	y	y	y	y	y	y	boost 174.4 cap 460 cooldown 2.4 s, decel 98.9+0.356v, ends <125; replay of slide test matches every tick
+slide_jump	3.9	y	-	y	n	y	y	jump from slide = normal jump; landing with crouch held re-slides (no boost on cooldown): emerges from slide+jump rules
+lurch	3.10	y	y	y	y	y	y	per new airborne press, speed kept, k=0.492 until 0.278 s then linear to 0 at 0.498 s; replaces air accel that tick; within ~1 deg of 27 recorded presses. W-held early presses unresolved
+tap_strafe	3.11	y	-	y	n	y	y	emerges from lurch (each scroll tick is a new press); no dedicated rule
 wall_interaction	3.12	n	n	y	y	y	n	slide-along only
 wall_bounce	3.13	y	n	n	n	n	n	
 wall_climb	3.13	n	n	n	n	n	n	

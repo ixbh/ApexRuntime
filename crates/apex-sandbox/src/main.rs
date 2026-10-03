@@ -337,7 +337,7 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
          {}\n\
          [placeholder Source-lineage rules, not Apex yet]",
         s.tick,
-        s.mode.name(),
+        s.mode_name(),
         if s.crouched { " (crouched)" } else { "" },
         s.position.x,
         s.position.y,

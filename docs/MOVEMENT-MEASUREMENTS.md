@@ -62,12 +62,12 @@ the 20 divergent ticks are the unmodelled start kick.
 
 ## Still to measure
 
-walk/run/sprint/crouch speed · ground acceleration curve · friction decay ·
-gravity · jump impulse/apex · air acceleration and air speed cap ·
-slide entry speed threshold, boost, decay and cooldown · lurch window,
-strength and speed cost · tap-strafe response per press · wall-climb
-timing/speed · mantle heights and duration · superglide window vs FPS ·
-crouch transition time · hull sizes · step height.
+lurch (clean A/D taps at fixed times after takeoff; exact window and
+strength model) · air acceleration / air speed cap (strafe with A/D held) ·
+sprint-release drop (299 → 120.7) · slide entry speed threshold and exact
+cooldown · start-kick threshold · frame-rate dependence (repeat at
+`fps_max 144`) · wall-climb timing/speed · mantle heights and duration ·
+superglide window · hull sizes · step height.
 
 ## Measurement plan
 

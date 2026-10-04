@@ -1,0 +1,19 @@
+[package]
+name = "apex-iw4l"
+description = "Adapter: runs apex-core movement inside IW4L (MW2 runtime) — collision bridge, usercmd -> input, state -> playerState."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+apex-math.workspace = true
+apex-collision.workspace = true
+apex-core.workspace = true
+# IW4L (Apache-2.0), pinned to the commit the adapter was written against.
+movement_iw4 = { git = "https://github.com/vladtrc/iw4L", rev = "bfe3c2aa700c06285c12c7cd659e3a5f42468f12" }
+playerstate_iw4 = { git = "https://github.com/vladtrc/iw4L", rev = "bfe3c2aa700c06285c12c7cd659e3a5f42468f12" }
+trace_iw4 = { git = "https://github.com/vladtrc/iw4L", rev = "bfe3c2aa700c06285c12c7cd659e3a5f42468f12" }
+
+[lints]
+workspace = true

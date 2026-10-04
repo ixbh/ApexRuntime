@@ -211,6 +211,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "apex-iw4l"
+version = "0.1.0"
+dependencies = [
+ "apex-collision",
+ "apex-core",
+ "apex-math",
+ "movement_iw4",
+ "playerstate_iw4",
+ "trace_iw4",
+]
+
+[[package]]
 name = "apex-math"
 version = "0.1.0"
 dependencies = [
@@ -3448,6 +3460,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "math_iw4"
+version = "0.1.0"
+source = "git+https://github.com/vladtrc/iw4L?rev=bfe3c2aa700c06285c12c7cd659e3a5f42468f12#bfe3c2aa700c06285c12c7cd659e3a5f42468f12"
+dependencies = [
+ "libm",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3480,6 +3500,17 @@ checksum = "b63fbc4a50860e98e7b2aa7804ded1db5cbc3aff9193adaff57a6931bf7c4b4c"
 dependencies = [
  "adler2",
  "simd-adler32",
+]
+
+[[package]]
+name = "movement_iw4"
+version = "0.1.0"
+source = "git+https://github.com/vladtrc/iw4L?rev=bfe3c2aa700c06285c12c7cd659e3a5f42468f12#bfe3c2aa700c06285c12c7cd659e3a5f42468f12"
+dependencies = [
+ "libm",
+ "math_iw4",
+ "playerstate_iw4",
+ "trace_iw4",
 ]
 
 [[package]]
@@ -4234,6 +4265,15 @@ name = "plain"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
+
+[[package]]
+name = "playerstate_iw4"
+version = "0.1.0"
+source = "git+https://github.com/vladtrc/iw4L?rev=bfe3c2aa700c06285c12c7cd659e3a5f42468f12#bfe3c2aa700c06285c12c7cd659e3a5f42468f12"
+dependencies = [
+ "libm",
+ "math_iw4",
+]
 
 [[package]]
 name = "png"
@@ -5061,6 +5101,11 @@ checksum = "1d38ac1cf9b95face32296c0a3ede1fdc270627c9d9c02a7274dd6d960dc4d56"
 dependencies = [
  "winnow",
 ]
+
+[[package]]
+name = "trace_iw4"
+version = "0.1.0"
+source = "git+https://github.com/vladtrc/iw4L?rev=bfe3c2aa700c06285c12c7cd659e3a5f42468f12#bfe3c2aa700c06285c12c7cd659e3a5f42468f12"
 
 [[package]]
 name = "tracing"

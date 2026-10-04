@@ -8,6 +8,7 @@ members = [
     "crates/apex-sandbox",
     "crates/apex-tables",
     "crates/apex-inputbot",
+    "crates/apex-iw4l",
 ]
 
 [workspace.package]

@@ -593,8 +593,9 @@ pub fn climb_tick(
     // Vertical speed.
     let mut vz = s.velocity.z;
     if no_mantle_hang {
+        // S21 session 6 (No-ma contacts): -1.9/tick at vz 67, -2.45 at 33.
         vz = if vz > 0.0 {
-            (vz - cfg.climb_accel * dt).max(0.0)
+            (vz + (cfg.no_mantle_vz_drag * vz - cfg.no_mantle_vz_decel) * dt).max(0.0)
         } else {
             (vz + cfg.climb_accel * dt).min(0.0)
         };

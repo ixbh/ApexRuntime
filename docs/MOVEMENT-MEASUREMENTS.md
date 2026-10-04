@@ -143,6 +143,28 @@ Same match, logs rotate at 10 MB (keep copies: `traces/raw/`).
   pull 0.3 s; climb space 147 u, attach offset 100 u, end boost +28 u;
   wall jump zones (mini 0-19 u: 188 out, green/neutral: 258 out).
 
+## Session 6 (2026-10-04, 165 fps): superglide tap strafe, No-ma, long tap strafe
+
+Log: `traces/raw/s6/`, CSV `traces/flowstate-session6.csv`, timeline
+`research/analysis/s6_timeline.py`, taps `research/analysis/s6_glide_taps.py`.
+Markers: crouch taps standing still (pairs ~1.05 s apart = hit).
+- **Sideways superglide** exits ~90° to the view at 460 (A/D held): confirmed.
+- **Lurch velocity-change cap** (every session): one press changes horizontal
+  velocity by at most 0.7 × 299 + one tick of air accel (217.6 @60, 212.4
+  @144, 209.3/212.3 @165). Past it the lurch keeps its direction and gives
+  up speed (299 -> 256.1 measured / 256.7 predicted on a 45° press;
+  400.9 -> 391.7 / 391.8 after a superglide); if no speed on that direction
+  is reachable it turns asin(cap/|v|) (27.07° at 460; measured 27.0-27.4°
+  on all four first taps). Explains the old "speed-loss window" and the
+  back press 299 -> 82. Implemented; A/D replays unchanged (1.70° mean).
+- **Lurch window after a superglide**: W taps lurch (half the remaining
+  angle per tap, k ~0.5) until ~0.5 s after the superglide jump.
+- **Long tap strafes** (test 5): 15-23 taps, turns up to 184°, speed exactly
+  constant (355/367/356 kept): no gain, no loss below the cap.
+- **No-ma bounces** (A held, 48 u block): no mantles; contacts at +14..+40
+  above the baseline, rising slowly (dvz/dt = -492 + 2.66·vz), jump vz
+  matches the green-zone fit within 2-6 u/s on 10 more bounces.
+
 ## Still to measure
 
 lurch (clean A/D taps at fixed times after takeoff; exact window and

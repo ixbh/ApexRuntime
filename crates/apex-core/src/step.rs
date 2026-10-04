@@ -254,7 +254,7 @@ pub fn step_with_report(
         // Lurch time = time since the last jump / first airborne tick (the
         // jump tick counts as 0); restarts on wall jumps and mantle exits.
         let t_air = if was_on_ground { 0.0 } else { s.lurch_t };
-        rep.lurch_k = lurch(&mut s, input, wish_dir, t_air, cfg);
+        rep.lurch_k = lurch(&mut s, input, wish_dir, t_air, cfg, dt);
         // A lurch tick replaces the normal air acceleration (fits the S21
         // traces at 60 and 144 fps; adding both overshoots late presses).
         if rep.lurch_k == 0.0 {
@@ -420,6 +420,7 @@ fn lurch(
     wish_dir: Vec3,
     t_air: f32,
     cfg: &MovementConfig,
+    dt: f32,
 ) -> f32 {
     if s.lurch_disabled {
         return 0.0;
@@ -439,8 +440,30 @@ fn lurch(
         // Exactly opposite at k = 0.5: no defined direction; leave it.
         return 0.0;
     }
-    s.velocity.x = dir.x * speed;
-    s.velocity.y = dir.y * speed;
+    // The change is capped (S21, every session: |Δv| tops out at 0.7 × 299 +
+    // one tick of air accel: 217.6 @60 fps, 212.4 @144, 209.3/212.3 @165).
+    // Past the cap the direction is kept and speed is given up: the fastest
+    // speed along `dir` within the cap (299 -> 256.7 predicted / 256.1
+    // measured on a 45° press; 400.9 -> 391.8 / 391.7 after a superglide).
+    // If no speed along `dir` is close enough, it turns as far as the cap
+    // allows (asin(cap/|v|): 27.07° at 460, measured 27.0-27.4°).
+    let cap = cfg.lurch_max_delta_frac * cfg.sprint_speed + cfg.air_accel * cfg.run_speed * dt;
+    let mut new_h = dir * speed;
+    if (new_h - h).length() > cap {
+        let along = h.dot(dir);
+        let disc = along * along - (speed * speed - cap * cap);
+        new_h = if disc >= 0.0 {
+            dir * (along + disc.sqrt())
+        } else {
+            let cur = h / speed;
+            let side = (dir - cur * cur.dot(dir)).normalize_or_zero();
+            let sin = (cap / speed).min(1.0);
+            let cos = (1.0 - sin * sin).sqrt();
+            (cur * cos + side * sin) * (speed * cos)
+        };
+    }
+    s.velocity.x = new_h.x;
+    s.velocity.y = new_h.y;
     k
 }
 

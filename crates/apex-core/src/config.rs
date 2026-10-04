@@ -129,6 +129,12 @@ pub struct MovementConfig {
     pub climb_side_speed: f32,
     pub climb_up_side_speed: f32,
     pub climb_side_accel: f32,
+    /// A lurch changes horizontal velocity by at most this × sprint speed
+    /// (+ one tick of air acceleration); the rest of the turn is lost.
+    pub lurch_max_delta_frac: f32,
+    /// No-mantle hang while rising: dvz/dt = −decel + drag·vz.
+    pub no_mantle_vz_decel: f32,
+    pub no_mantle_vz_drag: f32,
     pub climb_up_side_accel: f32,
     /// Sideways climb while rising: dvz/dt = −gravity + drag·vz.
     pub climb_side_vz_drag: f32,
@@ -250,6 +256,9 @@ impl MovementConfig {
         climb_side_speed: sheet::CLIMB_SIDE_SPEED,
         climb_up_side_speed: sheet::CLIMB_UP_SIDE_SPEED,
         climb_side_accel: sheet::CLIMB_SIDE_ACCEL,
+        lurch_max_delta_frac: sheet::LURCH_MAX_DELTA_FRAC,
+        no_mantle_vz_decel: sheet::NO_MANTLE_VZ_DECEL,
+        no_mantle_vz_drag: sheet::NO_MANTLE_VZ_DRAG,
         climb_up_side_accel: sheet::CLIMB_UP_SIDE_ACCEL,
         climb_side_vz_drag: sheet::CLIMB_SIDE_VZ_DRAG,
         climb_peak_time: sheet::CLIMB_PEAK_TIME,

@@ -654,10 +654,14 @@ fn tap_strafe_out_of_a_superglide() {
     let turned = glide
         .normalize_or_zero()
         .dot(n.velocity.horizontal().normalize_or_zero());
-    assert!(turned < 0.9, "heading barely changed");
+    // A 90° tap at superglide speed hits the lurch cap (session 6: 27.0-27.4°,
+    // 460 -> 395-412); later, smaller taps finish the turn without loss.
+    let deg = turned.clamp(-1.0, 1.0).acos().to_degrees();
+    assert!((deg - 27.07).abs() < 1.0, "turned {deg}");
     assert!(
-        (n.horizontal_speed() - glide.length()).abs() < 1.0,
-        "speed kept"
+        (n.horizontal_speed() - 409.7).abs() < 5.0,
+        "speed {}",
+        n.horizontal_speed()
     );
 }
 
@@ -724,8 +728,9 @@ fn no_ma_fatigue_bounce_on_a_chest_high_wall() {
     assert!(s.position.z < 48.0, "below the ledge: {}", s.position.z);
     let (s, r) = step_with_report(&s, &jump, &cfg, &w, DT60);
     assert!(r.wall_jump);
-    // Mini or green zone depending on where the no-mantle hang holds you:
-    // OPEN, to be measured in Flowstate (session 6, No-ma bounce on 48 u).
+    // The hang stays near the attach height (session 6: contacts at +14..+40
+    // rise a few units), so the zone follows the attach: this immediate
+    // fatigued jump attaches low (mini); session 6 bounces were green.
     assert!(s.velocity.z > 200.0, "bounce vz {}", s.velocity.z);
 
     // Same jump looking straight at it with W: mantles.

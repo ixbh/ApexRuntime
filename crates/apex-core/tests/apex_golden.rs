@@ -201,7 +201,14 @@ fn lurch_matches_trace_profile() {
     ] {
         let (dh, dv, _) = lurch_at(t, DT60, false);
         assert!((dh - game).abs() < 1.5, "t={t}: {dh} vs {game}");
-        assert!(dv.abs() < 0.5, "lurch keeps speed: {dv}");
+        // Full-strength 90° presses hit the |Δv| cap and give up speed
+        // (S21: 299 -> 250-277); weaker late ones keep it.
+        // 42.2° sits at the cap's edge (S21: 299 -> 299, |Δv| 215.4 < 217.6).
+        if game > 43.5 {
+            assert!((-49.0..=-15.0).contains(&dv), "t={t}: speed change {dv}");
+        } else {
+            assert!(dv.abs() < 2.0, "t={t}: lurch keeps speed: {dv}");
+        }
     }
     // Same strength per press at 144 fps (trace 0.236 s: 43.3 deg, 0.431 s: 10.3).
     for (t, game) in [(0.236, 43.3), (0.431, 10.3)] {
@@ -410,4 +417,37 @@ fn fatigued_slide_hop_is_not_eaten_by_the_ground_check() {
     }
     // ~2·vz/g = 0.38 s = ~54 ticks at 144 fps.
     assert!(air_ticks > 45, "landed after {air_ticks} ticks");
+}
+
+#[test]
+fn lurch_velocity_change_is_capped_at_superglide_speed() {
+    // Session 6 (165 fps), W taps after a sideways superglide: the first tap
+    // at 460 turns only 27.0-27.4° (cap 209.3: asin(209.3/460) = 27.07°)
+    // and drops to ~400-412; |Δv| = 209.1-211.8 on every capped tap.
+    let w = flat();
+    let cfg = MovementConfig::default();
+    let mut s = grounded(&w, &cfg, Vec3::new(460.0, 0.0, 0.0));
+    s.time_on_ground = 2.0;
+    let dt = 1.0 / 165.0;
+    s = step(&s, &input(0.0, 0.0, Buttons::JUMP), &cfg, &w, dt);
+    for _ in 0..30 {
+        s = step(&s, &input(0.0, 0.0, Buttons::NONE), &cfg, &w, dt);
+    }
+    let before = s.velocity.horizontal();
+    // View 90° right of the velocity (yaw -90), tap W.
+    let tap = MovementInput {
+        forward: 1.0,
+        yaw: -90.0,
+        ..MovementInput::default()
+    };
+    let n = step(&s, &tap, &cfg, &w, dt);
+    let after = n.velocity.horizontal();
+    let turn = (heading(after) - heading(before)).abs();
+    assert!((turn - 27.07).abs() < 0.5, "turn {turn}");
+    assert!(
+        (after.length() - 409.7).abs() < 3.0,
+        "speed {}",
+        after.length()
+    );
+    assert!((after - before).length() <= 209.3 + 495.0 * dt + 0.1);
 }

@@ -13,6 +13,8 @@
 //! Options:  --fps N   cap the frame rate (like Apex's fps_max; default: vsync)
 //!           --hz N    fixed simulation rate instead of one tick per frame
 //!           --fov N   Apex FOV slider value (default 110)
+//!           --sens N  Apex mouse sensitivity (default 2.0; 0.022° per count × N,
+//!                     same mouse/DPI as in game)
 //!
 //! Like Apex, movement runs once per rendered frame (one usercmd per frame,
 //! dt = that frame's time), so frame-rate-dependent tech behaves as in game.
@@ -76,7 +78,9 @@ fn fixed_hz_from_args() -> Option<f64> {
 fn fps_cap_from_args() -> Option<f64> {
     arg_value("--fps").filter(|v| (20.0..=1000.0).contains(v))
 }
-const MOUSE_DEG_PER_COUNT: f32 = 0.022 * 2.0; // Source m_yaw 0.022 × sensitivity 2
+/// Apex (like Source) turns 0.022° per mouse count × the sensitivity setting.
+const DEG_PER_COUNT_PER_SENS: f32 = 0.022;
+const DEFAULT_APEX_SENS: f32 = 2.0;
 
 fn main() {
     let fps_cap = fps_cap_from_args();
@@ -161,6 +165,12 @@ pub(crate) struct Sim {
     /// Last bhop: (ground ticks before the jump, speed lost on the ground,
     /// bhop penalty on the jump, wasted press on the landing tick).
     pub(crate) last_hop: Option<(u64, f32, f32, bool)>,
+    /// Mouse degrees per count (`--sens`).
+    pub(crate) deg_per_count: f32,
+    /// Current airborne arc: (start yaw, start heading, start speed, lurches,
+    /// view turned so far) and the last finished one, for tap-strafe tuning.
+    pub(crate) arc: Option<(f32, f32, f32, u32, f32)>,
+    pub(crate) last_arc: Option<(u32, f32, f32, f32, f32)>,
     pub(crate) recording: Option<Recording>,
     pub(crate) hud_visible: bool,
 }
@@ -201,6 +211,12 @@ impl Sim {
             last_event: ("-", 0),
             last_landing: (0.0, 0),
             hop_land: None,
+            deg_per_count: DEG_PER_COUNT_PER_SENS
+                * arg_value("--sens")
+                    .filter(|v| (0.05..=20.0).contains(v))
+                    .map_or(DEFAULT_APEX_SENS, |v| v as f32),
+            arc: None,
+            last_arc: None,
             last_hop: None,
             recording: None,
             hud_visible: true,
@@ -359,8 +375,9 @@ fn look(
         return;
     }
     let d = motion.delta;
-    sim.yaw = apex_math::wrap_degrees(sim.yaw - d.x * MOUSE_DEG_PER_COUNT);
-    sim.pitch = (sim.pitch + d.y * MOUSE_DEG_PER_COUNT).clamp(-89.0, 89.0);
+    let k = sim.deg_per_count;
+    sim.yaw = apex_math::wrap_degrees(sim.yaw - d.x * k);
+    sim.pitch = (sim.pitch + d.y * k).clamp(-89.0, 89.0);
 }
 
 fn sample_input(
@@ -488,6 +505,31 @@ fn simulate(
         } else if !next.on_ground() {
             sim.hop_land = None;
         }
+        // Airborne arc readout (view turn vs velocity turn, lurches, speed).
+        let heading = |v: apex_math::Vec3| v.y.atan2(v.x).to_degrees();
+        let airborne = !next.on_ground() && next.mantle.is_none() && next.climb.is_none();
+        match (sim.arc, airborne) {
+            (None, true) => {
+                sim.arc = Some((
+                    input.yaw,
+                    heading(next.velocity),
+                    next.horizontal_speed(),
+                    0,
+                    0.0,
+                ));
+            }
+            (Some((y0, h0, s0, n, _)), true) => {
+                let lurched = u32::from(rep.lurch_k > 0.0);
+                let view = apex_math::wrap_degrees(input.yaw - y0);
+                sim.arc = Some((y0, h0, s0, n + lurched, view));
+            }
+            (Some((_, h0, s0, n, view)), false) => {
+                let turned = apex_math::wrap_degrees(heading(sim.prev.velocity) - h0);
+                sim.last_arc = Some((n, view, turned, s0, sim.prev.horizontal_speed()));
+                sim.arc = None;
+            }
+            (None, false) => {}
+        }
         sim.last_input = input;
         sim.jump_latch = false;
         sim.crouch_latch = false;
@@ -533,6 +575,7 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
          last event: {} ({} ticks ago)   {}\n\
          last hop: {}\n\
          climb space: {}\n\
+         last air arc: {}\n\
          {}\n\
          [Apex S21 rules where measured; see sheets/constants.tsv]",
         s.tick,
@@ -597,6 +640,14 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
             ),
         },
         climb_space_text(s, &sim.cfg),
+        match sim.last_arc {
+            None => "-".to_owned(),
+            Some((n, view, turned, s0, s1)) => format!(
+                "{n} lurches, view turned {view:+.0}°, velocity turned {turned:+.0}°, \
+                 speed {s0:.0} -> {s1:.0}   (sens {:.2})",
+                sim.deg_per_count / DEG_PER_COUNT_PER_SENS
+            ),
+        },
         rec,
     );
 }

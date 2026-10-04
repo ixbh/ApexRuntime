@@ -79,6 +79,41 @@ pub struct MovementConfig {
     /// An unfatigued jump out of a slide raises horizontal speed to at least this.
     pub slide_jump_min_speed: f32,
 
+    /// Mantle: duration = base + per_unit × ledge height above the feet.
+    pub mantle_duration_base: f32,
+    pub mantle_duration_per_unit: f32,
+    /// Horizontal travel onto the ledge.
+    pub mantle_forward: f32,
+    /// Highest ledge (above the feet) that can be mantled; from standing on the ground.
+    pub mantle_max_height: f32,
+    pub mantle_ground_max_height: f32,
+    /// Classic superglide: jump in the last `superglide_window` seconds of a
+    /// mantle, crouch within `superglide_crouch_ticks` ticks after it.
+    pub superglide_window: f32,
+    pub superglide_crouch_ticks: f32,
+    /// S21 mantle boost (late jump without crouch): exit speed multiplier and jump height.
+    pub mantle_boost_mult: f32,
+    pub mantle_boost_jump_height: f32,
+    pub mantle_boost_enabled: bool,
+
+    /// Wall climb: attaches when vz falls to `climb_attach_vz`, accelerates to
+    /// the peak, then decays exponentially; ends with a push after `climb_duration`.
+    pub climb_attach_vz: f32,
+    pub climb_accel: f32,
+    pub climb_peak_speed: f32,
+    pub climb_decay_rate: f32,
+    pub climb_duration: f32,
+    pub climb_end_push_up: f32,
+    pub climb_end_push_out: f32,
+    /// Jump off a wall: push along the normal (and along the A/D input).
+    pub wall_jump_push: f32,
+    /// Early wall jump (wall bounce): vz ramps min → max over the window.
+    pub wall_bounce_window: f32,
+    pub wall_bounce_vz_min: f32,
+    pub wall_bounce_vz_max: f32,
+    /// Distance ahead in which a wall counts as touched.
+    pub wall_probe_dist: f32,
+
     /// Source `sv_airaccelerate`. `[source]`
     pub air_accel: f32,
     /// Wish-speed cap used for the air-accel *projection* test (Source's 30). `[source]`
@@ -138,6 +173,28 @@ impl MovementConfig {
         jump_fatigue_end: sheet::JUMP_FATIGUE_END,
         slide_jump_mult: sheet::SLIDE_JUMP_MULT,
         slide_jump_min_speed: sheet::SLIDE_JUMP_MIN_SPEED,
+        mantle_duration_base: sheet::MANTLE_DURATION_BASE,
+        mantle_duration_per_unit: sheet::MANTLE_DURATION_PER_UNIT,
+        mantle_forward: sheet::MANTLE_FORWARD,
+        mantle_max_height: sheet::MANTLE_MAX_HEIGHT,
+        mantle_ground_max_height: sheet::MANTLE_GROUND_MAX_HEIGHT,
+        superglide_window: sheet::SUPERGLIDE_WINDOW,
+        superglide_crouch_ticks: sheet::SUPERGLIDE_CROUCH_TICKS,
+        mantle_boost_mult: sheet::MANTLE_BOOST_MULT,
+        mantle_boost_jump_height: sheet::MANTLE_BOOST_JUMP_HEIGHT,
+        mantle_boost_enabled: sheet::MANTLE_BOOST_ENABLED,
+        climb_attach_vz: sheet::CLIMB_ATTACH_VZ,
+        climb_accel: sheet::CLIMB_ACCEL,
+        climb_peak_speed: sheet::CLIMB_PEAK_SPEED,
+        climb_decay_rate: sheet::CLIMB_DECAY_RATE,
+        climb_duration: sheet::CLIMB_DURATION,
+        climb_end_push_up: sheet::CLIMB_END_PUSH_UP,
+        climb_end_push_out: sheet::CLIMB_END_PUSH_OUT,
+        wall_jump_push: sheet::WALL_JUMP_PUSH,
+        wall_bounce_window: sheet::WALL_BOUNCE_WINDOW,
+        wall_bounce_vz_min: sheet::WALL_BOUNCE_VZ_MIN,
+        wall_bounce_vz_max: sheet::WALL_BOUNCE_VZ_MAX,
+        wall_probe_dist: sheet::WALL_PROBE_DIST,
         air_accel: sheet::AIR_ACCEL,
         air_speed_cap: sheet::AIR_SPEED_CAP,
         step_height: sheet::STEP_HEIGHT,

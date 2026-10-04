@@ -4,10 +4,11 @@
 //! it samples input, drives `apex_core::step` on a fixed clock, and renders
 //! the resulting state. Nothing in the movement depends on Bevy.
 //!
-//! Controls: mouse look · WASD · Space jump · Ctrl/C crouch · Shift sprint
+//! Controls: mouse look · WASD · Space jump · Ctrl/C/L crouch · Shift sprint
 //!           scroll up = tap W · scroll down = tap jump (Apex-style binds)
 //!           F1 HUD · F2 always-sprint · F5 start/stop recording · R respawn
 //!           Esc release mouse
+//! Options:  --hz N   simulation ticks per second (default 60; e.g. 165)
 //!
 //! Scroll notches become one-tick presses with a release tick between them,
 //! so every notch is a *new* press (what lurch / tap-strafing keys off).
@@ -36,7 +37,23 @@ pub fn to_bevy(v: apex_math::Vec3) -> Vec3 {
     Vec3::new(v.x, v.z, -v.y) * UNITS_TO_METRES
 }
 
-const TICK_RATE: f64 = 60.0;
+/// Default simulation rate. Apex runs movement once per client frame, so
+/// frame-tight tech (superglide: crouch exactly one tick after jump) depends
+/// on it: run with `--hz 165` to practise at 165 fps timing.
+const DEFAULT_TICK_RATE: f64 = 60.0;
+
+fn tick_rate_from_args() -> f64 {
+    let mut args = std::env::args().skip(1);
+    while let Some(a) = args.next() {
+        if a == "--hz"
+            && let Some(v) = args.next().and_then(|v| v.parse::<f64>().ok())
+            && (10.0..=1000.0).contains(&v)
+        {
+            return v;
+        }
+    }
+    DEFAULT_TICK_RATE
+}
 const MOUSE_DEG_PER_COUNT: f32 = 0.022 * 2.0; // Source m_yaw 0.022 × sensitivity 2
 
 fn main() {
@@ -81,6 +98,9 @@ struct Sim {
     /// A jump press survives until a tick consumes it, so a tap shorter than
     /// one tick is never lost between render frames.
     jump_latch: bool,
+    /// Same for crouch: a superglide's crouch tap can be shorter than a tick.
+    crouch_latch: bool,
+    tick_rate: f64,
     /// Scroll-wheel notches waiting to be turned into one-tick presses.
     scroll_fwd_pending: u32,
     scroll_jump_pending: u32,
@@ -90,6 +110,8 @@ struct Sim {
     auto_sprint: bool,
     /// Last lurch (strength, tick) so the HUD can show it for longer than a tick.
     last_lurch: (f32, u64),
+    /// Last traversal / tech event (name, tick) for the HUD.
+    last_event: (&'static str, u64),
     recording: Option<Recording>,
     hud_visible: bool,
 }
@@ -104,12 +126,13 @@ struct Recording {
 
 impl Sim {
     fn new() -> Self {
+        let tick_rate = tick_rate_from_args();
         let world = proving_ground();
         let s = MovementState::at(SPAWN);
         Self {
             world,
             cfg: MovementConfig::default(),
-            clock: FixedClock::new(TICK_RATE),
+            clock: FixedClock::new(tick_rate),
             prev: s,
             cur: s,
             last_report: StepReport::default(),
@@ -117,12 +140,15 @@ impl Sim {
             yaw: 0.0,
             pitch: 0.0,
             jump_latch: false,
+            crouch_latch: false,
+            tick_rate,
             scroll_fwd_pending: 0,
             scroll_jump_pending: 0,
             fwd_pulse_last: false,
             jump_pulse_last: false,
             auto_sprint: true,
             last_lurch: (0.0, 0),
+            last_event: ("-", 0),
             recording: None,
             hud_visible: true,
         }
@@ -279,7 +305,10 @@ fn sample_input(
     );
     buttons.set(
         Buttons::CROUCH,
-        keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::KeyC),
+        keys.pressed(KeyCode::ControlLeft)
+            || keys.pressed(KeyCode::KeyC)
+            || keys.pressed(KeyCode::KeyL)
+            || sim.crouch_latch,
     );
     buttons.set(
         Buttons::SPRINT,
@@ -306,6 +335,9 @@ fn simulate(
 ) {
     if keys.just_pressed(KeyCode::Space) {
         sim.jump_latch = true;
+    }
+    if keys.any_just_pressed([KeyCode::ControlLeft, KeyCode::KeyC, KeyCode::KeyL]) {
+        sim.crouch_latch = true;
     }
     for ev in wheel.read() {
         // Line units are notches; pixel units (touchpads) count as one notch.
@@ -341,8 +373,31 @@ fn simulate(
         if rep.lurch_k > 0.0 {
             sim.last_lurch = (rep.lurch_k, next.tick);
         }
+        let event = if rep.superglide {
+            Some("SUPERGLIDE")
+        } else if rep.mantle_boost {
+            Some("MANTLE BOOST")
+        } else if rep.wall_jump {
+            Some("wall jump")
+        } else if rep.climb_finished {
+            Some("climb push")
+        } else if rep.climb_started {
+            Some("wall climb")
+        } else if rep.mantle_finished {
+            Some("mantle")
+        } else if rep.mantle_started {
+            Some("mantle start")
+        } else if rep.slide_boosted {
+            Some("slide boost")
+        } else {
+            None
+        };
+        if let Some(e) = event {
+            sim.last_event = (e, next.tick);
+        }
         sim.last_input = input;
         sim.jump_latch = false;
+        sim.crouch_latch = false;
         if let Some(rec) = sim.recording.as_mut() {
             rec.rows.push(TraceRow::new(&next, &input, &rep));
             rec.inputs.push(input);
@@ -402,6 +457,7 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
          air {:.3}s ground {:.3}s {}\n\
          last lurch k {:.2} ({} ticks ago)   slide boost {}\n\
          always-sprint {} (F2)   scroll: up = W tap, down = jump\n\
+         last event: {} ({} ticks ago)   sim {} Hz (--hz)\n\
          {}\n\
          [Apex S21 rules where measured; see sheets/constants.tsv]",
         s.tick,
@@ -438,6 +494,9 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
             )
         },
         if sim.auto_sprint { "ON" } else { "OFF" },
+        sim.last_event.0,
+        s.tick.saturating_sub(sim.last_event.1),
+        sim.tick_rate,
         rec,
     );
 }
@@ -466,7 +525,7 @@ fn hotkeys(keys: Res<ButtonInput<KeyCode>>, mut sim: ResMut<Sim>) {
                     inputs: Vec::new(),
                 });
             }
-            Some(rec) => match save_recording(&rec) {
+            Some(rec) => match save_recording(&rec, sim.tick_rate) {
                 Ok(path) => info!("saved recording to {}", path.display()),
                 Err(e) => error!("could not save recording: {e}"),
             },
@@ -477,7 +536,7 @@ fn hotkeys(keys: Res<ButtonInput<KeyCode>>, mut sim: ResMut<Sim>) {
 /// Writes `traces/sandbox-<n>.csv` (what happened) and
 /// `traces/sandbox-<n>.input.json` (an input script that reproduces it with
 /// `apex-replay`, as long as the recording started grounded or at rest).
-fn save_recording(rec: &Recording) -> std::io::Result<PathBuf> {
+fn save_recording(rec: &Recording, rec_tick_rate: f64) -> std::io::Result<PathBuf> {
     let dir = PathBuf::from("traces");
     std::fs::create_dir_all(&dir)?;
     let stamp = std::time::SystemTime::now()
@@ -521,7 +580,7 @@ fn save_recording(rec: &Recording) -> std::io::Result<PathBuf> {
     let script = InputScript {
         name: format!("sandbox-{stamp}"),
         description: "Recorded in apex-sandbox.".into(),
-        tick_rate: TICK_RATE,
+        tick_rate: rec_tick_rate,
         ticks: rec.inputs.len() as u64,
         start: ScriptStart {
             position: rec.start.position.to_array(),

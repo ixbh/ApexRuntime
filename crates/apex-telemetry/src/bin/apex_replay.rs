@@ -12,8 +12,10 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use apex_collision::Brush;
 use apex_collision::maps::{flat, proving_ground};
 use apex_core::MovementConfig;
+use apex_math::Vec3;
 use apex_telemetry::{InputScript, write_csv};
 
 fn main() -> ExitCode {
@@ -21,19 +23,36 @@ fn main() -> ExitCode {
     let mut script_path: Option<PathBuf> = None;
     let mut out: Option<PathBuf> = None;
     let mut flat_world = false;
+    // --block X H: flat world plus a block whose near face is at x = X, height H.
+    let mut block: Option<(f32, f32)> = None;
     while let Some(a) = args.next() {
         match a.as_str() {
             "--out" | "-o" => out = args.next().map(PathBuf::from),
             "--flat" => flat_world = true,
+            "--block" => {
+                let x = args.next().and_then(|v| v.parse().ok());
+                let h = args.next().and_then(|v| v.parse().ok());
+                match (x, h) {
+                    (Some(x), Some(h)) => block = Some((x, h)),
+                    _ => {
+                        eprintln!("--block needs X and H");
+                        return ExitCode::FAILURE;
+                    }
+                }
+            }
             "--help" | "-h" => {
-                eprintln!("usage: apex-replay <script.json> [--out trace.csv|trace.json] [--flat]");
+                eprintln!(
+                    "usage: apex-replay <script.json> [--out trace.csv|trace.json] [--flat | --block X H]"
+                );
                 return ExitCode::SUCCESS;
             }
             _ => script_path = Some(PathBuf::from(a)),
         }
     }
     let Some(script_path) = script_path else {
-        eprintln!("usage: apex-replay <script.json> [--out trace.csv|trace.json] [--flat]");
+        eprintln!(
+            "usage: apex-replay <script.json> [--out trace.csv|trace.json] [--flat | --block X H]"
+        );
         return ExitCode::FAILURE;
     };
 
@@ -52,7 +71,18 @@ fn main() -> ExitCode {
         }
     };
 
-    let world = if flat_world { flat() } else { proving_ground() };
+    let world = match block {
+        Some((x, h)) => {
+            let mut w = flat();
+            w.add(Brush::cuboid(
+                Vec3::new(x, -100_000.0, 0.0),
+                Vec3::new(x + 400.0, 100_000.0, h),
+            ));
+            w
+        }
+        None if flat_world => flat(),
+        None => proving_ground(),
+    };
     let rows = match script.run(&world, &MovementConfig::default()) {
         Ok(r) => r,
         Err(e) => {

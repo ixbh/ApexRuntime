@@ -43,6 +43,14 @@ pub struct StepReport {
     /// A slide started this tick (`slide_boosted` if it got the boost).
     pub slide_started: bool,
     pub slide_boosted: bool,
+    /// Traversal events this tick.
+    pub mantle_started: bool,
+    pub mantle_finished: bool,
+    pub superglide: bool,
+    pub mantle_boost: bool,
+    pub climb_started: bool,
+    pub climb_finished: bool,
+    pub wall_jump: bool,
     pub hit_wall: bool,
     pub wall_normal: Vec3,
 }
@@ -85,8 +93,11 @@ pub fn step_with_report(
     let input_mag = wish.length().min(1.0);
     let wish_dir = wish.normalize_or_zero();
 
-    update_crouch(&mut s, input, cfg, world, dt);
-    categorize(&mut s, cfg, world);
+    let traversing = s.mantle.is_some() || s.climb.is_some();
+    if !traversing {
+        update_crouch(&mut s, input, cfg, world, dt);
+        categorize(&mut s, cfg, world);
+    }
 
     let base_speed = if input.buttons.contains(Buttons::SPRINT) && input.forward > 0.0 {
         cfg.sprint_speed
@@ -97,6 +108,16 @@ pub fn step_with_report(
     let wish_speed = max_speed * input_mag;
     rep.wish_dir = wish_dir;
     rep.wish_speed = wish_speed;
+
+    if traversing {
+        if s.mantle.is_some() {
+            crate::traverse::mantle_tick(&mut s, &mut rep, input, pressed, cfg, dt);
+        } else {
+            crate::traverse::climb_tick(&mut s, &mut rep, input, pressed, wish_dir, cfg, world, dt);
+        }
+        finish_tick(&mut s, &mut rep, input, was_on_ground, cfg, world, dt);
+        return (s, rep);
+    }
 
     // Slide state first: landing with crouch held re-enters the slide on the
     // landing tick, so a jump on that tick is already a slide-jump (S21 traces).
@@ -140,6 +161,36 @@ pub fn step_with_report(
     }
 
     let hull = cfg.hull(s.crouched);
+    let pre_move_h = s.velocity.horizontal();
+
+    // Pushing into a wall touched on an earlier tick: a mantle (ground or air)
+    // or a wall climb (air) starts at the start of this tick and replaces the
+    // normal move. S21 traces: mantles begin the tick after contact; the climb
+    // attaches before gravity is applied.
+    if !rep.jumped {
+        let allow_climb = !s.on_ground();
+        crate::traverse::try_start(
+            &mut s,
+            &mut rep,
+            input,
+            wish_dir,
+            pre_move_h,
+            allow_climb,
+            cfg,
+            world,
+            dt,
+        );
+        if s.climb.is_some() {
+            // The attach tick itself was handled by try_start.
+            finish_tick(&mut s, &mut rep, input, was_on_ground, cfg, world, dt);
+            return (s, rep);
+        }
+        if s.mantle.is_some() {
+            crate::traverse::mantle_tick(&mut s, &mut rep, input, pressed, cfg, dt);
+            finish_tick(&mut s, &mut rep, input, was_on_ground, cfg, world, dt);
+            return (s, rep);
+        }
+    }
     if s.on_ground() && s.sliding {
         s.velocity.z = 0.0;
         let speed = s.velocity.length();
@@ -199,17 +250,48 @@ pub fn step_with_report(
         rep.wall_normal = moved.wall_normal;
     }
 
-    categorize(&mut s, cfg, world);
-    if s.on_ground() {
-        s.velocity.z = 0.0;
+    if rep.hit_wall {
+        let n = rep.wall_normal.horizontal().normalize_or_zero();
+        s.last_wall_normal = n;
+        s.last_wall_impact = pre_move_h.dot(-n);
+    } else {
+        s.last_wall_normal = Vec3::ZERO;
+        s.last_wall_impact = 0.0;
+    }
+    finish_tick(&mut s, &mut rep, input, was_on_ground, cfg, world, dt);
+    (s, rep)
+}
+
+/// Shared end of every tick: ground check, landing bookkeeping, timers.
+fn finish_tick(
+    s: &mut MovementState,
+    rep: &mut StepReport,
+    input: &MovementInput,
+    was_on_ground: bool,
+    cfg: &MovementConfig,
+    world: &impl CollisionWorld,
+    dt: f32,
+) {
+    if s.mantle.is_some() || s.climb.is_some() {
+        // Mid-traversal: scripted, never "on the ground".
+        s.mode = MoveMode::Air;
+        s.ground_normal = Vec3::ZERO;
+    } else {
+        categorize(s, cfg, world);
+        if s.on_ground() {
+            s.velocity.z = 0.0;
+        }
     }
     rep.landed = !was_on_ground && !rep.jumped && s.on_ground();
     if rep.landed {
         s.landed_from_jump = s.air_from_jump;
     }
     if was_on_ground && !s.on_ground() && !rep.jumped {
-        // Walked off a ledge: this airtime does not count as a jump.
+        // Walked off a ledge (or started a mantle): not a jump.
         s.air_from_jump = false;
+    }
+    if s.on_ground() {
+        s.climbed_this_air = false;
     }
 
     // --- Timers / bookkeeping. ---
@@ -234,7 +316,6 @@ pub fn step_with_report(
     s.prev_right = input.right;
     s.tick += 1;
     s.time += f64::from(dt);
-    (s, rep)
 }
 
 /// Ground friction (Source `Friction`). Returns the speed removed.

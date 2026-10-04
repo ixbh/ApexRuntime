@@ -1,0 +1,307 @@
+//! Golden tests for traversal, against R5Flowstate S21 measurements
+//! (sessions 4-5, 2026-10-03; docs/MOVEMENT-MEASUREMENTS.md).
+
+use apex_collision::{Brush, BrushWorld};
+use apex_core::*;
+
+const DT60: f32 = 1.0 / 60.0;
+const DT165: f32 = 1.0 / 165.0;
+
+/// Flat floor plus a block in front (+X) whose near face is at `face_x`.
+fn world_with_block(face_x: f32, height: f32) -> BrushWorld {
+    let mut w = BrushWorld::new();
+    w.add(Brush::cuboid(
+        Vec3::new(-5000.0, -5000.0, -32.0),
+        Vec3::new(5000.0, 5000.0, 0.0),
+    ));
+    w.add(Brush::cuboid(
+        Vec3::new(face_x, -2000.0, 0.0),
+        Vec3::new(face_x + 400.0, 2000.0, height),
+    ));
+    w
+}
+
+fn input(forward: f32, right: f32, buttons: Buttons) -> MovementInput {
+    MovementInput {
+        forward,
+        right,
+        buttons,
+        ..MovementInput::default()
+    }
+}
+
+fn grounded_at(w: &BrushWorld, cfg: &MovementConfig, x: f32, vx: f32) -> MovementState {
+    let mut s = MovementState::at(Vec3::new(x, 0.0, 0.0));
+    settle(&mut s, cfg, w);
+    assert!(s.on_ground());
+    s.velocity = Vec3::new(vx, 0.0, 0.0);
+    s
+}
+
+const SPRINT_W: Buttons = Buttons::SPRINT;
+
+/// Sprint-jump into a tall wall holding W; returns per-tick (t since takeoff, state, report).
+fn climb_run(dt: f32, ticks: usize) -> Vec<(f32, MovementState, StepReport)> {
+    let w = world_with_block(45.0, 2000.0);
+    let cfg = MovementConfig::default();
+    let mut s = grounded_at(&w, &cfg, 0.0, 299.0);
+    let mut out = Vec::new();
+    let (n, r) = step_with_report(&s, &input(1.0, 0.0, SPRINT_W | Buttons::JUMP), &cfg, &w, dt);
+    s = n;
+    out.push((0.0, s, r));
+    for i in 1..ticks {
+        let (n, r) = step_with_report(&s, &input(1.0, 0.0, SPRINT_W), &cfg, &w, dt);
+        s = n;
+        out.push((i as f32 * dt, s, r));
+    }
+    out
+}
+
+#[test]
+fn wall_climb_matches_trace() {
+    // 13 climbs: attach 0.267 s after takeoff, peak 182.5 at +0.184 s,
+    // climb 0.833 s, rise to the end of the climb 142.8 u, end push
+    // vz 255.5 / |h| 61.7.
+    let run = climb_run(DT60, 200);
+    let attach = run
+        .iter()
+        .find(|(_, _, r)| r.climb_started)
+        .expect("climb starts");
+    assert!((attach.0 - 0.267).abs() < 0.03, "attach at {}", attach.0);
+    let peak = run
+        .iter()
+        .filter(|(_, s, _)| s.climb.is_some())
+        .find(|(_, s, _)| s.velocity.z >= 182.4)
+        .expect("reaches peak");
+    assert!(
+        (peak.0 - attach.0 - 0.184).abs() < 0.03,
+        "peak after {}",
+        peak.0 - attach.0
+    );
+    let end = run
+        .iter()
+        .find(|(_, _, r)| r.climb_finished)
+        .expect("climb ends");
+    // S21 tick sequence at 60 fps: attach tick (half gravity), 51 climb ticks,
+    // push on the next tick = 52 ticks from attach to push (0.867 s). Replays
+    // of 3 recorded climbs match every tick (research/analysis/climb_check.py).
+    assert!(
+        (end.0 - attach.0 - 0.867).abs() < 0.01,
+        "climb lasted {}",
+        end.0 - attach.0
+    );
+    assert!((end.1.velocity.z - 255.5).abs() < 0.1);
+    assert!((end.1.velocity.horizontal().length() - 61.7).abs() < 0.1);
+    assert!(end.1.velocity.x < 0.0, "pushed away from the wall");
+    assert!(
+        (end.1.position.z - 142.8).abs() < 5.0,
+        "rise {}",
+        end.1.position.z
+    );
+}
+
+#[test]
+fn climb_only_once_per_airtime() {
+    let run = climb_run(DT60, 300);
+    assert_eq!(run.iter().filter(|(_, _, r)| r.climb_started).count(), 1);
+}
+
+fn wall_jump_at(climb_t: f32, right: f32) -> Vec3 {
+    let w = world_with_block(45.0, 2000.0);
+    let cfg = MovementConfig::default();
+    let mut s = grounded_at(&w, &cfg, 0.0, 299.0);
+    s = step(
+        &s,
+        &input(1.0, 0.0, SPRINT_W | Buttons::JUMP),
+        &cfg,
+        &w,
+        DT60,
+    );
+    for _ in 0..200 {
+        let (n, r) = step_with_report(&s, &input(1.0, 0.0, SPRINT_W), &cfg, &w, DT60);
+        s = n;
+        if r.climb_started {
+            break;
+        }
+    }
+    let mut t = 0.0;
+    while t + 0.5 * DT60 < climb_t {
+        s = step(&s, &input(1.0, right, SPRINT_W), &cfg, &w, DT60);
+        t += DT60;
+    }
+    let (s, r) = step_with_report(
+        &s,
+        &input(1.0, right, SPRINT_W | Buttons::JUMP),
+        &cfg,
+        &w,
+        DT60,
+    );
+    assert!(r.wall_jump);
+    s.velocity
+}
+
+#[test]
+fn wall_jump_mid_climb_keeps_climb_speed() {
+    // Session 4 test 5: |h| 258.0 straight out, vz = current climb speed (86-109).
+    let v = wall_jump_at(0.4, 0.0);
+    assert!((v.horizontal().length() - 258.0).abs() < 0.5);
+    assert!(v.z > 80.0 && v.z < 140.0, "vz {}", v.z);
+}
+
+#[test]
+fn wall_bounce_matches_trace() {
+    // Session 5 test 3: |h| 354-365 (258·√2), vz 332-340 at ~0.06-0.08 s
+    // contact, 371-374 at ~0.1 s.
+    let v = wall_jump_at(0.067, 1.0);
+    assert!(
+        (v.horizontal().length() - 364.9).abs() < 1.0,
+        "|h| {}",
+        v.horizontal().length()
+    );
+    assert!((v.z - 336.0).abs() < 8.0, "vz {}", v.z);
+    let v = wall_jump_at(0.1, 1.0);
+    assert!((v.z - 372.5).abs() < 4.0, "vz {}", v.z);
+}
+
+/// Walk into a 48 u ledge holding W (sprint), returning the mantle duration
+/// and the state right after it finishes.
+fn mantle_48(dt: f32, hold_w_at_end: bool) -> (f32, MovementState) {
+    let w = world_with_block(40.0, 48.0);
+    let cfg = MovementConfig::default();
+    let mut s = grounded_at(&w, &cfg, 0.0, 0.0);
+    let mut started = None;
+    let mut t = 0.0;
+    for _ in 0..1000 {
+        let fwd = if started.is_some() && !hold_w_at_end {
+            0.0
+        } else {
+            1.0
+        };
+        let (n, r) = step_with_report(&s, &input(fwd, 0.0, SPRINT_W), &cfg, &w, dt);
+        s = n;
+        t += dt;
+        if r.mantle_started {
+            started = Some(t);
+        }
+        if r.mantle_finished {
+            return (t - started.unwrap(), s);
+        }
+    }
+    panic!("no mantle");
+}
+
+#[test]
+fn mantle_duration_and_exit_match_trace() {
+    // 39 mantles: duration 0.162 + 0.00659·height (48 u -> 0.478 s), forward
+    // ~19 u, exit at full speed with W held, 0 without.
+    let (d, s) = mantle_48(DT60, true);
+    assert!((d - 0.478).abs() < 0.02, "duration {d}");
+    assert!((s.position.z - 48.0).abs() < 0.1);
+    assert!(
+        (s.horizontal_speed() - 299.0).abs() < 0.5,
+        "exit {}",
+        s.horizontal_speed()
+    );
+    let (_, s) = mantle_48(DT60, false);
+    assert_eq!(s.horizontal_speed(), 0.0);
+}
+
+/// Mantle a 48 u ledge at 165 fps, pressing jump `ticks_before_end` ticks
+/// before the mantle would finish, then crouch on the next tick if `crouch`.
+fn late_jump(ticks_before_end: usize, crouch: bool) -> (Vec3, StepReport) {
+    let w = world_with_block(40.0, 48.0);
+    let cfg = MovementConfig::default();
+    let mut s = grounded_at(&w, &cfg, 0.0, 0.0);
+    for _ in 0..1000 {
+        let (n, r) = step_with_report(&s, &input(1.0, 0.0, SPRINT_W), &cfg, &w, DT165);
+        s = n;
+        if r.mantle_started {
+            break;
+        }
+    }
+    let m = s.mantle.expect("mantling");
+    let ticks_total = ((m.duration - m.t) / DT165).ceil() as usize;
+    for _ in 0..ticks_total.saturating_sub(ticks_before_end) {
+        s = step(&s, &input(1.0, 0.0, SPRINT_W), &cfg, &w, DT165);
+    }
+    let (n, r) = step_with_report(
+        &s,
+        &input(1.0, 0.0, SPRINT_W | Buttons::JUMP),
+        &cfg,
+        &w,
+        DT165,
+    );
+    s = n;
+    if r.jumped {
+        return (s.velocity, r);
+    }
+    let b = if crouch {
+        SPRINT_W | Buttons::JUMP | Buttons::CROUCH
+    } else {
+        SPRINT_W | Buttons::JUMP
+    };
+    let (n, r) = step_with_report(&s, &input(1.0, 0.0, b), &cfg, &w, DT165);
+    (n.velocity, r)
+}
+
+#[test]
+fn superglide_matches_trace() {
+    // 7 superglides at 165 fps: |h| 460.0, vz = a fresh jump (287.6 first tick).
+    let (v, r) = late_jump(2, true);
+    assert!(r.superglide, "{r:?}");
+    assert!((v.horizontal().length() - 460.0).abs() < 0.1);
+    assert!((v.z - 287.5).abs() < 1.0, "vz {}", v.z);
+}
+
+#[test]
+fn mantle_boost_matches_trace() {
+    // S21 mantle boost: |h| 388.7 (= 1.3 × 299), 90 u jump (vz 367.4).
+    let (v, r) = late_jump(2, false);
+    assert!(r.mantle_boost, "{r:?}");
+    assert!((v.horizontal().length() - 388.7).abs() < 0.1);
+    assert!((v.z - 365.1).abs() < 1.5, "vz {}", v.z);
+}
+
+#[test]
+fn early_jump_during_mantle_jumps_off() {
+    // Too early: a plain jump off the wall, no horizontal speed (vz 287.6 @165).
+    let (v, r) = late_jump(40, false);
+    assert!(r.jumped && !r.superglide && !r.mantle_boost);
+    assert!(v.horizontal().length() < 0.01);
+    assert!((v.z - 287.5).abs() < 1.0);
+}
+
+#[test]
+fn superglide_needs_crouch_exactly_one_tick_after_jump() {
+    // Same-tick jump+crouch is not a superglide (trainer: "1 frame later").
+    let w = world_with_block(40.0, 48.0);
+    let cfg = MovementConfig::default();
+    let mut s = grounded_at(&w, &cfg, 0.0, 0.0);
+    for _ in 0..1000 {
+        let (n, r) = step_with_report(&s, &input(1.0, 0.0, SPRINT_W), &cfg, &w, DT165);
+        s = n;
+        if r.mantle_started {
+            break;
+        }
+    }
+    let m = s.mantle.unwrap();
+    let ticks_total = ((m.duration - m.t) / DT165).ceil() as usize;
+    for _ in 0..ticks_total - 3 {
+        s = step(&s, &input(1.0, 0.0, SPRINT_W), &cfg, &w, DT165);
+    }
+    let both = SPRINT_W | Buttons::JUMP | Buttons::CROUCH;
+    let (s, r1) = step_with_report(&s, &input(1.0, 0.0, both), &cfg, &w, DT165);
+    let (_, r2) = step_with_report(&s, &input(1.0, 0.0, both), &cfg, &w, DT165);
+    assert!(!r1.superglide && !r2.superglide);
+}
+
+#[test]
+fn superglide_window_is_last_0_15_s() {
+    // 0.12 s before the end (inside): superglide. 0.2 s before (outside): jump-off.
+    let inside = (0.12 / DT165) as usize;
+    let (_, r) = late_jump(inside, true);
+    assert!(r.superglide, "{r:?}");
+    let outside = (0.2 / DT165) as usize;
+    let (v, r) = late_jump(outside, true);
+    assert!(!r.superglide && r.jumped && v.horizontal().length() < 0.01);
+}

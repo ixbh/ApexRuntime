@@ -21,6 +21,7 @@ pub mod input;
 pub mod sheet;
 pub mod state;
 pub mod step;
+pub mod traverse;
 
 pub use apex_collision::{CollisionWorld, Trace};
 pub use apex_math::{Aabb, Vec3};

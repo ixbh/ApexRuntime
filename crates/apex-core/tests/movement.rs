@@ -283,19 +283,44 @@ fn walks_up_stairs() {
 }
 
 #[test]
-fn mantle_height_block_stops_walking_player() {
+fn walking_into_a_40u_block_mantles_onto_it() {
     let w = proving_ground();
     let cfg = MovementConfig::default();
-    // 40u block at x=500 — taller than the 18u step height.
+    // 40u block at x=500: taller than the 18u step height, low enough to
+    // mantle from the ground while holding W.
+    let mut s = MovementState::at(Vec3::new(440.0, 360.0, 0.0));
+    let mut finished = false;
+    for _ in 0..120 {
+        let (n, rep) = step_with_report(&s, &MovementInput::forward(), &cfg, &w, DT);
+        s = n;
+        if rep.mantle_finished {
+            finished = true;
+            break;
+        }
+    }
+    assert!(finished, "mantle should finish");
+    assert!(
+        (s.position.z - 40.0).abs() < 0.5,
+        "on top: z = {}",
+        s.position.z
+    );
+    assert!(s.position.x > 500.0);
+}
+
+#[test]
+fn a_tall_wall_is_not_mantled_from_the_ground() {
+    let w = proving_ground();
+    let cfg = MovementConfig::default();
+    // 100u block (x=980..1076): above the ground mantle limit.
     let s = run(
         &w,
         &cfg,
-        MovementState::at(Vec3::new(440.0, 360.0, 0.0)),
+        MovementState::at(Vec3::new(920.0, 360.0, 0.0)),
         120,
         |_| MovementInput::forward(),
     );
     assert!(s.position.z < 1.0);
-    assert!(s.position.x + cfg.stand_hull.maxs.x <= 500.0);
+    assert!(s.position.x + cfg.stand_hull.maxs.x <= 980.0);
 }
 
 #[test]

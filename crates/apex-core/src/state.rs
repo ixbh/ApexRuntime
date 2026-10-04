@@ -24,6 +24,32 @@ impl MoveMode {
     }
 }
 
+/// An in-progress mantle: a scripted move from `start` onto the ledge at `end`.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Mantle {
+    pub start: Vec3,
+    pub end: Vec3,
+    /// Horizontal unit direction onto the ledge.
+    pub dir: Vec3,
+    pub t: f32,
+    pub duration: f32,
+    /// Ticks since a jump was pressed inside the superglide window (None = no
+    /// pending late jump). The following tick decides superglide vs mantle boost.
+    pub late_jump_ticks: Option<u8>,
+}
+
+/// An in-progress wall climb.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Climb {
+    /// Horizontal wall normal (pointing away from the wall).
+    pub normal: Vec3,
+    pub t: f32,
+    /// The climb speed has reached its peak and is decaying.
+    pub peaked: bool,
+}
+
 /// Complete movement state of one player. Plain data: cloning it and stepping
 /// both copies with the same inputs must give bit-identical results.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -60,6 +86,15 @@ pub struct MovementState {
     pub air_from_jump: bool,
     /// The last landing ended an airtime that started with a jump (jump fatigue applies).
     pub landed_from_jump: bool,
+    /// Traversal in progress (at most one is `Some`).
+    pub mantle: Option<Mantle>,
+    pub climb: Option<Climb>,
+    /// A wall climb already happened this airtime (one per airtime).
+    pub climbed_this_air: bool,
+    /// Wall hit by last tick's move (horizontal normal, zero if none) and how
+    /// fast the player was moving into it, for next tick's mantle/climb check.
+    pub last_wall_normal: Vec3,
+    pub last_wall_impact: f32,
 }
 
 impl MovementState {
@@ -73,7 +108,11 @@ impl MovementState {
 
     /// "air", "ground" or "slide".
     pub fn mode_name(&self) -> &'static str {
-        if self.sliding {
+        if self.mantle.is_some() {
+            "mantle"
+        } else if self.climb.is_some() {
+            "climb"
+        } else if self.sliding {
             "slide"
         } else {
             self.mode.name()

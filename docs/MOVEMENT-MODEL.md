@@ -153,28 +153,50 @@ about a frame long.
 Apex has no free wall-jump. "Wall bounces" are a jump input timed against
 wall-climb/hang state. They come after wall climb is modelled.
 
-## Next implementation plan (traversal), from sessions 4-5 measurements
+## Traversal (implemented: `crates/apex-core/src/traverse.rs`)
 
-Not implemented yet. New `MoveMode`s `Mantle` and `Climb` in a `traverse.rs`
-module; constants go in `sheets/constants.tsv` first (rows already there,
-`used=no`).
+Checked against the S21 traces with geometry-matched replays
+(`research/analysis/climb_check.py`, `mantle_check.py`) and golden tests
+(`tests/traversal_golden.rs`).
 
-- **Mantle**: moving into a wall with W held, ledge top within reach
-  (ground ≤ ~60 u, air ≤ ~80 u above feet), standing room on top. Scripted
-  move to (top, +~20 u forward) over `0.22 + 0.006·height` s. Exit on top:
-  velocity = forward × current max speed if W held, else 0.
-- **Jump during a mantle**: progress < ~0.93 → jump off (fresh jump vz,
-  |h| ≈ 0). Progress ≥ ~0.93 and crouch on the same or next tick → **classic
-  superglide** = slide-jump at the exit (|h| = min(299 + 174.4, 460), fresh
-  jump vz, tap-strafeable). Progress ≥ ~0.93 without crouch → **mantle boost**
-  (|h| = 1.3 × 299 = 388.7, jump height 90). Real S21 mantle-boost gate also
-  uses a view-pitch sweet spot: not modelled.
-- **Wall climb**: airborne, pushing into a wall, once per airtime, attaches
-  when vz ≤ 89.6. vz accelerates 505 u/s² to 182.5, then decays 1.73/s
-  (2.88 %/tick at 60 fps). Lasts 0.833 s, ends with 255.5 up / 61.7 out. If a
-  ledge comes within reach during the climb → mantle.
-- **Wall jump / bounce** (jump while on the wall): 258 out along the wall
-  normal + 258 along the A/D input if held. vz: within 0.1 s of wall contact
-  lerp 260 → 373; later = current climb vz.
-- Golden tests: climb rise 142.8 / end push, mantle duration vs height,
-  superglide exit 460, mantle boost 388.7, wall bounce |h| 365.
+### Mantle
+Triggered at the **start of a tick** after the player touched a wall on the
+previous tick and is pushing into it (W toward it, moving into it, or last
+tick's impact > 50 u/s). Needs a ledge with standing room `mantle_forward`
+(19 u) past the wall, `step_height < height ≤ 80` above the feet (≤ 60
+from the ground). Scripted move onto the ledge over
+`0.162 + 0.00659 × height` s (path between start and end is a smooth
+stand-in: the game does not log inside a mantle). Exit: forward × current max
+speed if W is held, else standing still. Mantles don't cause jump fatigue.
+Replays: 37/39 recorded mantles reproduced (the other 2 start from a wall
+climb the replay doesn't cover), end height within 1 u on 36, duration error
++0.003..+0.008 s mean (game spread 0.023 s), start within a tick.
+
+### Jumping during a mantle
+* more than 0.15 s before the end → jump off (full jump, no horizontal speed);
+* in the last 0.15 s, **crouch exactly one tick later** → **classic
+  superglide**: a slide-jump from the ledge top, `min(base + 174.4, 460)`
+  horizontal + full jump (base = sprint/run by input). Tick-based, so the
+  jump→crouch gap is one frame: easy at 30 fps, 6 ms at 165 fps;
+* in the last 0.15 s without that crouch → **S21 mantle boost**:
+  1.3 × base horizontal, 90 u jump (`mantle_boost_enabled`; the real S21 gate
+  also needs a view-pitch sweet spot, not modelled).
+
+### Wall climb
+Airborne, pushing into a wall, once per airtime. Decided **mid-tick**: if
+`vz − ½·g·dt ≤ 90` the climb attaches on that tick (second half of gravity
+skipped), then vz rises 505 u/s² to 182.5, then decays `exp(−1.753·t)`.
+After 51 climb ticks (0.85 s) the next tick pushes 255.5 up / 61.7 away.
+Reaching a ledge during the climb mantles over it. Replays: 3 recorded
+climbs match every tick (81/81 within 5 u/s, worst 1.3); climbs with A held
+differ (A/D lengthen the climb and strengthen the push: not modelled).
+
+### Wall jump / wall bounce
+Jump while climbing: 258 u/s along the wall normal, plus 258 along the
+wall toward the A/D input if held (bounce |h| = 365). vz: within 0.1 s of
+contact 260 → 373 by contact time; later the climb speed minus one tick of
+gravity. Replays: 2 of 3 recorded wall jumps match every tick.
+
+### Not modelled yet
+A/D during a climb, mantle-boost view-pitch gate, slopes (and the 350/400
+slide clamps seen on slopes), the occasional 299 landing clamp, ziplines.

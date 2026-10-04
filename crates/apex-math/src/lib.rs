@@ -210,6 +210,11 @@ pub fn cos(v: f32) -> f32 {
 }
 
 #[inline]
+pub fn exp(v: f32) -> f32 {
+    libm::expf(v)
+}
+
+#[inline]
 pub fn deg_to_rad(d: f32) -> f32 {
     d * (core::f32::consts::PI / 180.0)
 }

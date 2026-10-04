@@ -23,6 +23,38 @@ copy that one file out with the game closed and export from the copy.
 - Do **not** use RSX's "Game Finder" / "Skin Finder": they look for the
   Steam install. Always open files from `F:\R5Flowstate\paks\Win64`.
 
+## What works (2026-10-04, RSX 2.3.0 at `F:\Tools\rsx_2.3.0`; Claude runs it)
+
+The user asked Claude to run RSX. Use `rsx_nogui.exe` from its own folder.
+Gotchas found the hard way:
+
+- Pass `--loadwhitelist <types>` or nothing is parsed: names stay hashes
+  and exports silently write nothing.
+- `--list` lists whatever the export filter left (an empty filter empties
+  it), so list without `-export`:
+  `rsx_nogui -nogui --loadwhitelist mdl_,arig,aseq,wepn,matl --list out.csv --listformat csv <pak>`
+- Exports default to Cast for `mdl_`/`arig`/`aseq`. Name filter:
+  `--exportfilter <substring>` (ImGui filter, commas = OR).
+- **Textures do not export from the CLI** (any `txtr`, or a model with its
+  materials loaded, exits 1). The texture step is the GUI (`rsx.exe`).
+- `pc_all.opt.starpak` (Flowstate's optional high-res textures) is not
+  installed: lower-res textures only.
+
+Exported so far (`F:\ApexContent`, never committed):
+
+- `weapons\r99\mdl\Weapons\r97\ptpov_r97_LOD0.cast`: R-99 viewmodel (the
+  R-99 is `r97` internally), 114 bones, 23 meshes, 13 PBR materials whose
+  textures are referenced as `ptpov_r97/<name>.png`.
+- `weapons\r99\animrig\...\ptpov_r97.cast` + `animseq\...\ptpov_r97\*.cast`:
+  rig and 163 viewmodel sequences (30 fps), e.g. `reload_seq`,
+  `sprintslide`, `inspect_basic`, `fire_02`, `ads_in`, `draw`.
+- `characters\wattson\mdl\Weapons\arms\pov_pilot_light_wattson_LOD0.cast`
+  (84 bones, all in the R-99 skeleton: the gun's animations drive them) and
+  `mdl\Humans\class\light\pilot_light_wattson_LOD0-3.cast` (body).
+  Source pak: `root_lgnd_skins_wattson_classic.rpak`.
+
+`tools/cast_dump.py FILE.cast [--values]` prints a Cast file's node tree.
+
 ## Setup (user, once)
 
 1. Download `rsx_2.3.0.zip` from

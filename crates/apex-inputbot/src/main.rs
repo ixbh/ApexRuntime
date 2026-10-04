@@ -150,6 +150,32 @@ fn expand(a: &Attempt, deg_per_count: f64) -> Result<Vec<(f64, Action)>, String>
     Ok(out)
 }
 
+/// The workspace root (two levels above this crate).
+fn workspace_root() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+}
+
+/// `p` as given if it exists, else relative to the workspace root, else
+/// just the file name under research/bot/scripts.
+fn resolve(p: &str) -> String {
+    let given = std::path::Path::new(p);
+    let candidates = [
+        given.to_path_buf(),
+        workspace_root().join(p),
+        workspace_root()
+            .join("research/bot/scripts")
+            .join(given.file_name().unwrap_or_default()),
+    ];
+    candidates
+        .iter()
+        .find(|c| c.exists())
+        .unwrap_or(&candidates[0])
+        .to_string_lossy()
+        .into_owned()
+}
+
 fn arg_value(args: &[String], name: &str) -> Option<String> {
     args.iter()
         .position(|a| a == name)
@@ -212,6 +238,8 @@ fn main() {
     };
     let root = arg_value(&args, "--flowstate-root").unwrap_or_else(|| r"F:\R5Flowstate".into());
     let dry = args.iter().any(|a| a == "--dry-run");
+    // Paths may be given relative to the project root from any folder.
+    let path = &resolve(path);
     let script: Script = match std::fs::read_to_string(path)
         .map_err(|e| e.to_string())
         .and_then(|t| serde_json::from_str(&t).map_err(|e| e.to_string()))
@@ -311,12 +339,16 @@ fn run(script: &Script, plans: &[Vec<(f64, Action)>], root: &str) {
         println!("stopped: {why} (all keys released)");
     }
     // Attempt start times, to line attempts up with the game's message.log.
-    let out = format!(
-        "traces/raw/bot-{}-{}.json",
-        script.name.replace(' ', "_"),
-        now_unix_ms()
-    );
-    let _ = std::fs::create_dir_all("traces/raw");
+    let dir = workspace_root().join("traces/raw");
+    let out = dir
+        .join(format!(
+            "bot-{}-{}.json",
+            script.name.replace(' ', "_"),
+            now_unix_ms()
+        ))
+        .to_string_lossy()
+        .into_owned();
+    let _ = std::fs::create_dir_all(&dir);
     match std::fs::write(&out, serde_json::to_vec_pretty(&log).unwrap_or_default()) {
         Ok(()) => println!("attempt log: {out}"),
         Err(e) => eprintln!("could not write {out}: {e}"),

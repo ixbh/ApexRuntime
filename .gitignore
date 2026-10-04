@@ -61,3 +61,6 @@ ApexContent/
 *.rpak
 *.starpak
 *.mbnk
+*.cast
+*.rmdl
+*.vg

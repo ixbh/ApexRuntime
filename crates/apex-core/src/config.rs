@@ -81,6 +81,9 @@ pub struct MovementConfig {
     /// Bunnyhop penalty: a jump within `bhop_skip_time` of landing cuts
     /// horizontal speed above `sprint_speed` by up to `bhop_speed_penalty`.
     pub bhop_skip_time: f32,
+    /// Coyote time: a jump still works this long after leaving the ground
+    /// without one.
+    pub coyote_time: f32,
     pub bhop_speed_penalty: f32,
 
     /// Mantle: duration = base + per_unit × ledge height above the feet.
@@ -229,6 +232,7 @@ impl MovementConfig {
         slide_jump_mult: sheet::SLIDE_JUMP_MULT,
         slide_jump_min_speed: sheet::SLIDE_JUMP_MIN_SPEED,
         bhop_skip_time: sheet::BHOP_SKIP_TIME,
+        coyote_time: sheet::COYOTE_TIME,
         bhop_speed_penalty: sheet::BHOP_SPEED_PENALTY,
         mantle_duration_base: sheet::MANTLE_DURATION_BASE,
         mantle_duration_per_unit: sheet::MANTLE_DURATION_PER_UNIT,

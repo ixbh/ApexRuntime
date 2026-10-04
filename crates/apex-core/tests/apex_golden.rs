@@ -451,3 +451,76 @@ fn lurch_velocity_change_is_capped_at_superglide_speed() {
     );
     assert!((after - before).length() <= 209.3 + 495.0 * dt + 0.1);
 }
+
+/// Run off a 300 u high ledge at +X (edge at x = 100) at `speed`, pressing
+/// jump `after` seconds after leaving the ground. Returns (vz before the
+/// press tick, vz after, report) at 60 fps.
+fn coyote_jump(speed: f32, after: f32, slide: bool, fatigued: bool) -> (f32, f32, StepReport) {
+    let mut w = BrushWorld::new();
+    w.add(Brush::cuboid(
+        Vec3::new(-5000.0, -5000.0, -32.0),
+        Vec3::new(100.0, 5000.0, 0.0),
+    ));
+    w.add(Brush::cuboid(
+        Vec3::new(-5000.0, -5000.0, -400.0),
+        Vec3::new(5000.0, 5000.0, -300.0),
+    ));
+    let cfg = MovementConfig::default();
+    // Start right at the edge (no input: friction would stop a long run-up).
+    let mut s = MovementState::at(Vec3::new(110.0, 0.0, 0.0));
+    settle(&mut s, &cfg, &w);
+    s.velocity = Vec3::new(speed, 0.0, 0.0);
+    s.sliding = slide;
+    s.crouched = slide;
+    s.crouch_frac = if slide { 1.0 } else { 0.0 };
+    s.landed_from_jump = fatigued;
+    s.time_on_ground = if fatigued { 0.05 } else { 2.0 };
+    let held = if slide {
+        Buttons::CROUCH
+    } else {
+        Buttons::NONE
+    };
+    let mut left = None;
+    let mut t = 0.0;
+    for _ in 0..200 {
+        let jump_now = left.is_some_and(|t0: f32| t - t0 + 0.5 * DT60 >= after);
+        let b = if jump_now { held | Buttons::JUMP } else { held };
+        let before = s.velocity.z;
+        let (n, r) = step_with_report(&s, &input(0.0, 0.0, b), &cfg, &w, DT60);
+        if jump_now {
+            return (before, n.velocity.z, r);
+        }
+        if left.is_none() && !n.on_ground() {
+            left = Some(t + DT60);
+        }
+        s = n;
+        t += DT60;
+    }
+    panic!("never left the ledge");
+}
+
+#[test]
+fn coyote_jump_matches_trace() {
+    // S21: 10 coyote jumps 0.018-0.183 s after leaving the ground; each ends
+    // at vz_in + V - 1.5 g dt with V = 289.8 (never fatigued) or 273.9 out of
+    // a slide (x0.944). E.g. -31.2 -> +239.9 and -131.2 -> +139.8 at 60 fps.
+    let g15 = 1.5 * 750.0 * DT60;
+    let (vin, vout, r) = coyote_jump(250.0, 0.1, false, false);
+    assert!(r.jumped);
+    assert!((vout - (vin + 289.8 - g15)).abs() < 1.0, "{vin} -> {vout}");
+    // Fatigue does not apply (0.05 s after a jump-landing would be 30 %).
+    let (vin, vout, _) = coyote_jump(250.0, 0.1, false, true);
+    assert!(
+        (vout - (vin + 289.8 - g15)).abs() < 1.0,
+        "fatigued: {vin} -> {vout}"
+    );
+    // Out of a slide: 273.9.
+    let (vin, vout, _) = coyote_jump(330.0, 0.1, true, false);
+    assert!(
+        (vout - (vin + 273.9 - g15)).abs() < 1.5,
+        "slide: {vin} -> {vout}"
+    );
+    // Too late.
+    let (_, _, r) = coyote_jump(250.0, 0.25, false, false);
+    assert!(!r.jumped);
+}

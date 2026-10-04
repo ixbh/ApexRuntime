@@ -115,6 +115,19 @@ pub struct MovementState {
     pub lurch_t: f32,
     /// A mantle boost turned lurch off until the next ground contact.
     pub lurch_disabled: bool,
+    /// Coyote time: seconds since walking/sliding off the ground without a
+    /// jump (None = not available), whether we left in a slide, and how long
+    /// we had been on the ground (for the bhop penalty).
+    pub coyote: Option<Coyote>,
+}
+
+/// Coyote-time bookkeeping (see `MovementState::coyote`).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Coyote {
+    pub t: f32,
+    pub from_slide: bool,
+    pub ground_time: f32,
 }
 
 impl MovementState {

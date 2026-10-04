@@ -270,3 +270,11 @@ slide clamps seen on slopes), the occasional 299 landing clamp, ziplines.
   A ledge in reach with the input further off (A/D, or W+A/D turned 5°+)
   is the "no-mantle state": the climb stops and hangs, for No-ma bounces.
   Which zone the hang ends in on a 48 u block is OPEN (session 6).
+
+### Coyote time (wiki + S21, 2026-10-04)
+After walking/sliding off the ground without a jump, a jump still works for
+0.2 s. It adds a full, never-fatigued jump to the current vertical speed
+(S21: all 10 coyote jumps end at vz_in + V − 1.5·g·dt; −31.2 → +239.9,
+−131.2 → +139.8), ×0.944 if you left in a slide (V 273.9), and the bhop
+penalty uses the ground time before leaving (361.8 → 299). A mantle or climb
+ends it.

@@ -131,7 +131,15 @@ pub fn step_with_report(
     // --- Jump: leaving the ground *before* friction is what preserves speed on a bhop. ---
     let wants_jump =
         pressed.contains(Buttons::JUMP) || (cfg.auto_jump && input.buttons.contains(Buttons::JUMP));
-    if s.on_ground() && wants_jump {
+    // Coyote time (wiki; S21 traces): shortly after walking or sliding off an
+    // edge a jump still works. It adds a full, never-fatigued jump to the
+    // current vertical speed (falling at -25 -> +258; -131 -> +140).
+    let coyote = if s.on_ground() || s.mantle.is_some() || s.climb.is_some() {
+        None
+    } else {
+        s.coyote.filter(|c| c.t < cfg.coyote_time)
+    };
+    if (s.on_ground() || coyote.is_some()) && wants_jump {
         // Apex removes an extra half tick of gravity on the jump tick: with the
         // air move's split gravity below, the position advances by
         // (V - g*dt)*dt and the tick ends at V - 1.5*g*dt. Measured on the S21
@@ -139,22 +147,24 @@ pub fn step_with_report(
         // Jump fatigue (measured): after landing from a jump, height is 30 %
         // until 0.14 s on the ground, then recovers linearly to full at 0.735 s.
         // Falls and walk-offs do not fatigue. Jumps out of a slide launch 0.944x.
-        let frac = if s.landed_from_jump {
+        let frac = if coyote.is_none() && s.landed_from_jump {
             cfg.jump_fatigue_frac(s.time_on_ground)
         } else {
             1.0
         };
+        let ground_time = coyote.map_or(s.time_on_ground, |c| c.ground_time);
+        let from_slide = s.sliding || coyote.is_some_and(|c| c.from_slide);
         let mut launch = cfg.jump_speed(cfg.jump_height * frac);
         let speed = s.velocity.horizontal().length();
         // Bunnyhop penalty (S21 traces + wiki "skip_time"): jumping within
         // 1 s of landing cuts speed above sprint by up to 100, never below
         // sprint (443.3 -> 343.3, 337 -> 299, 297 kept; 1.13 s+ untouched).
-        let bhop = s.time_on_ground < cfg.bhop_skip_time;
+        let bhop = ground_time < cfg.bhop_skip_time;
         let mut target = speed;
         if bhop && speed > cfg.sprint_speed {
             target = (speed - cfg.bhop_speed_penalty).max(cfg.sprint_speed);
         }
-        if s.sliding {
+        if from_slide {
             launch *= cfg.slide_jump_mult;
             // Slide long jump: an unfatigued slide-jump is at least 350 u/s
             // horizontally (S21 traces: 316..335 -> 350.0; faster is kept).
@@ -168,7 +178,11 @@ pub fn step_with_report(
             s.velocity.x *= k;
             s.velocity.y *= k;
         }
-        s.velocity.z = launch - 0.5 * cfg.gravity * dt;
+        // A coyote jump keeps the vertical speed it already had (S21: all 10
+        // coyote jumps end at vz_in + V - 1.5 g dt).
+        let vz_in = if coyote.is_some() { s.velocity.z } else { 0.0 };
+        s.velocity.z = vz_in + launch - 0.5 * cfg.gravity * dt;
+        s.coyote = None;
         s.air_from_jump = true;
         s.mode = MoveMode::Air;
         s.ground_normal = Vec3::ZERO;
@@ -307,8 +321,18 @@ fn finish_tick(
         s.landed_from_jump = s.air_from_jump;
     }
     if was_on_ground && !s.on_ground() && !rep.jumped {
-        // Walked off a ledge (or started a mantle): not a jump.
+        // Walked off a ledge (or started a mantle): not a jump. Coyote time
+        // starts (not for mantles/climbs, and a climb ends it).
         s.air_from_jump = false;
+        s.coyote = (s.mantle.is_none() && s.climb.is_none()).then_some(crate::state::Coyote {
+            t: 0.0,
+            from_slide: s.sliding,
+            ground_time: s.time_on_ground,
+        });
+    } else if s.on_ground() || rep.jumped || s.climb.is_some() || s.mantle.is_some() {
+        s.coyote = None;
+    } else if let Some(c) = s.coyote.as_mut() {
+        c.t += dt;
     }
     // Climb space follows the ground; in the air it only moves down (falling
     // below the baseline drags it along).

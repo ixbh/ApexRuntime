@@ -28,5 +28,5 @@ pub use apex_math::{Aabb, Vec3};
 pub use clock::FixedClock;
 pub use config::MovementConfig;
 pub use input::{Buttons, MovementInput};
-pub use state::{Climb, Mantle, MoveMode, MovementState};
+pub use state::{Climb, Coyote, Mantle, MoveMode, MovementState};
 pub use step::{StepReport, settle, step, step_with_report};

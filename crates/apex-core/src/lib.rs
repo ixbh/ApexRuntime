@@ -28,4 +28,4 @@ pub use clock::FixedClock;
 pub use config::MovementConfig;
 pub use input::{Buttons, MovementInput};
 pub use state::{MoveMode, MovementState};
-pub use step::{StepReport, step, step_with_report};
+pub use step::{StepReport, settle, step, step_with_report};

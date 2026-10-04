@@ -79,6 +79,27 @@ Same match, logs rotate at 10 MB (keep copies: `traces/raw/`).
 - **Air strafe:** ~8.3 u/s perpendicular per 60 fps tick with mouse moving;
   ~0 with D held and camera fixed after a lurch (Source capped-wish behaviour).
 
+## Session 4 (2026-10-03): mantle, climb, fatigue
+
+- **MOVE-TRACE does not log during mantles** (TraversalMove): each mantle is
+  a gap of 0.35–0.68 s. Start/end states give height (24–78 u), duration
+  (~0.22 + 0.006·height s), forward travel (18–22 u) and exit speed.
+- **Superglide:** one clear success, exit |h| 388.7 (= 299 × 1.3), vz 367.4.
+  The client-side `bridge_mantle_boost_*_log` printed nothing; the server
+  logs `[MANTLE-BOOST] verdict` lines, so set the trig/apply logs in the
+  **server console** too. The player superglides reliably at 165 fps.
+- **Wall climb** (13 climbs): attaches 0.267 s after takeoff (vz ≈ 89.6),
+  accelerates to 182.5 u/s in 0.184 s, decays 2.88 %/tick, lasts 0.833 s,
+  ends with a 255.5 u/s up / 61.7 out push; rise 142.8 u. Jump off mid-climb
+  = 258 u/s straight out, vertical speed kept.
+- **Jump fatigue:** see MOVEMENT-MODEL.md. Implemented; replays of tests
+  8/9/12 match every jump launch (64/64); test 13 (moving over uneven
+  ground) 18/27, misses from landing-time differences.
+- **Landing over sprint speed** with W held: plain friction (−20.8/tick at
+  60 fps) down to 299, no special snap. Odd exact values (−100 on landing,
+  air speeds of exactly 350.0 / 400.0) appear only in slide/crouch combos:
+  unresolved.
+
 ## Still to measure
 
 lurch (clean A/D taps at fixed times after takeoff; exact window and

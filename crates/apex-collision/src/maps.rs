@@ -83,3 +83,15 @@ pub fn proving_ground() -> BrushWorld {
 
     w
 }
+
+/// A single floor 200,000 u across (z = 0) and nothing else. For replaying
+/// recorded traces where the player travels far: speeds are compared, not
+/// positions, and the recording's own map geometry is not available.
+pub fn flat() -> BrushWorld {
+    let mut w = BrushWorld::new();
+    w.add(Brush::cuboid(
+        Vec3::new(-100_000.0, -100_000.0, -32.0),
+        Vec3::new(100_000.0, 100_000.0, FLOOR_Z),
+    ));
+    w
+}

@@ -265,6 +265,7 @@ impl InputScript {
         cfg: &MovementConfig,
     ) -> Result<Vec<TraceRow>, ScriptError> {
         let mut s = self.start_state();
+        apex_core::settle(&mut s, cfg, world);
         let mut rows = Vec::with_capacity(self.ticks as usize);
         for (input, dt) in self.expand()? {
             let (next, rep) = step_with_report(&s, &input, cfg, world, dt);

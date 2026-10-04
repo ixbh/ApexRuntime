@@ -98,6 +98,10 @@ pub fn step_with_report(
     rep.wish_dir = wish_dir;
     rep.wish_speed = wish_speed;
 
+    // Slide state first: landing with crouch held re-enters the slide on the
+    // landing tick, so a jump on that tick is already a slide-jump (S21 traces).
+    update_slide(&mut s, &mut rep, input, pressed, was_on_ground, cfg);
+
     // --- Jump: leaving the ground *before* friction is what preserves speed on a bhop. ---
     let wants_jump =
         pressed.contains(Buttons::JUMP) || (cfg.auto_jump && input.buttons.contains(Buttons::JUMP));
@@ -106,14 +110,25 @@ pub fn step_with_report(
         // air move's split gravity below, the position advances by
         // (V - g*dt)*dt and the tick ends at V - 1.5*g*dt. Measured on the S21
         // client at 60 and 144 fps (rise 53.5 vs 55.0); higher fps jumps higher.
-        s.velocity.z = cfg.jump_speed(cfg.jump_height) - 0.5 * cfg.gravity * dt;
+        // Jump fatigue (measured): after landing from a jump, height is 30 %
+        // until 0.14 s on the ground, then recovers linearly to full at 0.735 s.
+        // Falls and walk-offs do not fatigue. Jumps out of a slide launch 0.944x.
+        let frac = if s.landed_from_jump {
+            cfg.jump_fatigue_frac(s.time_on_ground)
+        } else {
+            1.0
+        };
+        let mut launch = cfg.jump_speed(cfg.jump_height * frac);
+        if s.sliding {
+            launch *= cfg.slide_jump_mult;
+        }
+        s.velocity.z = launch - 0.5 * cfg.gravity * dt;
+        s.air_from_jump = true;
         s.mode = MoveMode::Air;
         s.ground_normal = Vec3::ZERO;
         s.sliding = false;
         rep.jumped = true;
     }
-
-    update_slide(&mut s, &mut rep, input, pressed, was_on_ground, cfg);
 
     let hull = cfg.hull(s.crouched);
     if s.on_ground() && s.sliding {
@@ -180,6 +195,13 @@ pub fn step_with_report(
         s.velocity.z = 0.0;
     }
     rep.landed = !was_on_ground && !rep.jumped && s.on_ground();
+    if rep.landed {
+        s.landed_from_jump = s.air_from_jump;
+    }
+    if was_on_ground && !s.on_ground() && !rep.jumped {
+        // Walked off a ledge: this airtime does not count as a jump.
+        s.air_from_jump = false;
+    }
 
     // --- Timers / bookkeeping. ---
     if s.on_ground() {
@@ -316,7 +338,7 @@ fn update_slide(
     let speed = s.velocity.horizontal().length();
     if !s.sliding
         && held
-        && (pressed.contains(Buttons::CROUCH) || !was_on_ground)
+        && (pressed.contains(Buttons::CROUCH) || !was_on_ground || s.time_on_ground == 0.0)
         && speed >= cfg.slide_start_min_speed
     {
         s.sliding = true;
@@ -362,6 +384,15 @@ fn clamp_velocity(v: &mut Vec3, cfg: &MovementConfig) {
     v.x = v.x.clamp(-m, m);
     v.y = v.y.clamp(-m, m);
     v.z = v.z.clamp(-m, m);
+}
+
+/// Put a fresh state on the ground if it starts within the ground probe of a
+/// walkable floor (e.g. the first tick of a replay). Changes nothing else.
+pub fn settle(s: &mut MovementState, cfg: &MovementConfig, world: &impl CollisionWorld) {
+    categorize(s, cfg, world);
+    if s.on_ground() {
+        s.velocity.z = 0.0;
+    }
 }
 
 /// Decide Ground vs Air by probing just below the feet (Source `CategorizePosition`).

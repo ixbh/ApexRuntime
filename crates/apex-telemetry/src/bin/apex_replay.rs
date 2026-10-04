@@ -5,13 +5,14 @@
 //! cargo run -p apex-telemetry --bin apex-replay -- scripts/inputs/bhop.json
 //! cargo run -p apex-telemetry --bin apex-replay -- scripts/inputs/bhop.json --out traces/bhop.csv
 //! cargo run -p apex-telemetry --bin apex-replay -- scripts/inputs/bhop.json --out traces/bhop.json
+//! cargo run -p apex-telemetry --bin apex-replay -- recorded.input.json --flat   # endless floor
 //! ```
 
 use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use apex_collision::maps::proving_ground;
+use apex_collision::maps::{flat, proving_ground};
 use apex_core::MovementConfig;
 use apex_telemetry::{InputScript, write_csv};
 
@@ -19,18 +20,20 @@ fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
     let mut script_path: Option<PathBuf> = None;
     let mut out: Option<PathBuf> = None;
+    let mut flat_world = false;
     while let Some(a) = args.next() {
         match a.as_str() {
             "--out" | "-o" => out = args.next().map(PathBuf::from),
+            "--flat" => flat_world = true,
             "--help" | "-h" => {
-                eprintln!("usage: apex-replay <script.json> [--out trace.csv|trace.json]");
+                eprintln!("usage: apex-replay <script.json> [--out trace.csv|trace.json] [--flat]");
                 return ExitCode::SUCCESS;
             }
             _ => script_path = Some(PathBuf::from(a)),
         }
     }
     let Some(script_path) = script_path else {
-        eprintln!("usage: apex-replay <script.json> [--out trace.csv|trace.json]");
+        eprintln!("usage: apex-replay <script.json> [--out trace.csv|trace.json] [--flat]");
         return ExitCode::FAILURE;
     };
 
@@ -49,7 +52,8 @@ fn main() -> ExitCode {
         }
     };
 
-    let rows = match script.run(&proving_ground(), &MovementConfig::default()) {
+    let world = if flat_world { flat() } else { proving_ground() };
+    let rows = match script.run(&world, &MovementConfig::default()) {
         Ok(r) => r,
         Err(e) => {
             eprintln!("{e}");

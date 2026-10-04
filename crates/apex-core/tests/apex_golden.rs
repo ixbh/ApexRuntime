@@ -256,3 +256,94 @@ fn crouch_takes_time_on_ground() {
     // Trace: duck state 1 -> 2 in 23 ticks (0.383 s).
     assert!((22..=24).contains(&ticks), "{ticks}");
 }
+
+/// Jump, land, wait `ground_wait` seconds on the ground, jump again; returns
+/// the second jump's launch speed V (= first-tick v_z + 1.5 g dt).
+fn second_jump_launch(ground_wait: f32, crouch: bool, sliding_speed: Option<f32>) -> f32 {
+    let w = flat();
+    let cfg = MovementConfig::default();
+    let mut s = grounded(&w, &cfg, Vec3::new(sliding_speed.unwrap_or(0.0), 0.0, 0.0));
+    let c = if crouch {
+        Buttons::CROUCH
+    } else {
+        Buttons::NONE
+    };
+    let fwd = if sliding_speed.is_some() { 1.0 } else { 0.0 };
+    s = step(&s, &input(fwd, 0.0, Buttons::JUMP | c), &cfg, &w, DT60);
+    while !s.on_ground() {
+        s = step(&s, &input(fwd, 0.0, c), &cfg, &w, DT60);
+    }
+    let mut waited = 0.0;
+    while waited + 0.5 * DT60 < ground_wait {
+        s = step(&s, &input(fwd, 0.0, c), &cfg, &w, DT60);
+        waited += DT60;
+    }
+    let s = step(&s, &input(fwd, 0.0, Buttons::JUMP | c), &cfg, &w, DT60);
+    s.velocity.z + 1.5 * cfg.gravity * DT60
+}
+
+#[test]
+fn jump_fatigue_matches_trace() {
+    // Session 4: jump within 0.14 s of a jump-landing -> 158.7 (30 % height);
+    // 0.45 s -> ~236; 0.55 s -> ~257; >= 0.735 s -> 289.8.
+    for (wait, game) in [
+        (0.0, 158.7),
+        (0.1, 158.7),
+        (0.45, 236.4),
+        (0.55, 257.3),
+        (1.0, 289.8),
+    ] {
+        let v = second_jump_launch(wait, false, None);
+        assert!((v - game).abs() < 4.0, "ground {wait}s: {v} vs {game}");
+    }
+    // Holding crouch does not change it (test 12 == test 11).
+    let v = second_jump_launch(0.0, true, None);
+    assert!((v - 158.7).abs() < 1.5, "crouch-held spam {v}");
+}
+
+#[test]
+fn slide_jump_is_0944_and_reslides_on_landing() {
+    // Sprint-crouch spam: fresh slide-jump 273.5, chained 150.0 (test 13).
+    let w = flat();
+    let cfg = MovementConfig::default();
+    let mut s = grounded(&w, &cfg, Vec3::new(299.0, 0.0, 0.0));
+    let slide = input(1.0, 0.0, Buttons::SPRINT | Buttons::CROUCH);
+    s = step(&s, &slide, &cfg, &w, DT60);
+    assert!(s.sliding);
+    let jump = input(1.0, 0.0, Buttons::SPRINT | Buttons::CROUCH | Buttons::JUMP);
+    s = step(&s, &jump, &cfg, &w, DT60);
+    let v_fresh = s.velocity.z + 1.5 * cfg.gravity * DT60;
+    assert!((v_fresh - 273.5).abs() < 1.0, "fresh slide-jump {v_fresh}");
+    while !s.on_ground() {
+        s = step(&s, &slide, &cfg, &w, DT60);
+    }
+    // Landing tick re-entered the slide, so an immediate jump is a slide-jump.
+    let s = step(&s, &jump, &cfg, &w, DT60);
+    let v_chain = s.velocity.z + 1.5 * cfg.gravity * DT60;
+    assert!(
+        (v_chain - 150.0).abs() < 1.0,
+        "chained slide-jump {v_chain}"
+    );
+}
+
+#[test]
+fn walking_off_a_ledge_does_not_fatigue() {
+    let cfg = MovementConfig::default();
+    let mut w = flat();
+    w.add(Brush::cuboid(
+        Vec3::new(-100.0, -100.0, 0.0),
+        Vec3::new(10.0, 100.0, 40.0),
+    ));
+    let mut s = MovementState::at(Vec3::new(0.0, 0.0, 40.0));
+    s = step(&s, &MovementInput::default(), &cfg, &w, DT60);
+    for _ in 0..120 {
+        s = step(&s, &input(1.0, 0.0, Buttons::NONE), &cfg, &w, DT60);
+        if s.on_ground() && s.position.z < 1.0 {
+            break;
+        }
+    }
+    assert!(s.on_ground() && s.position.z < 1.0);
+    let s = step(&s, &input(1.0, 0.0, Buttons::JUMP), &cfg, &w, DT60);
+    let v = s.velocity.z + 1.5 * cfg.gravity * DT60;
+    assert!((v - 289.8).abs() < 0.5, "{v}");
+}

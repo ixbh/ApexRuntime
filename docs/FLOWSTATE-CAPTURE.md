@@ -70,3 +70,17 @@ Same setup; copy `platform/logs/client/<session>/message*.log` to
 | 13 | sprinting: hold crouch and spam jump x8 | crouch-held jump spam while moving (slide/jump interaction) |
 
 Jump fatigue is NOT implemented until tests 8-13 are analysed together.
+
+## Session 5 protocol (superglide, wall bounce, 350/400 caps)
+
+Client console: `fps_max 165`, `bridge_move_trace 1`,
+`bridge_mantle_boost_trig_log 1`, `bridge_mantle_boost_apply_log 1`.
+**Server console** (the r5apex_ds window): `bridge_mantle_boost_trig_log 1`,
+`bridge_mantle_boost_apply_log 1`.
+
+| # | test | measures |
+|---|---|---|
+| 1 | 15+ superglides on one ledge at 165 fps, note hits | press timing (traversal frac, view-pitch delta), boost |
+| 2 | same ledge, 10 deliberately early and 10 deliberately late jumps | window edges |
+| 3 | wall bounce: sprint, jump into wall, tap A/D + jump on contact, x5 | wall-bounce impulse and timing |
+| 4 | slide-jump chains that reach 350/400 u/s in air (what you did in session 2/4), x3 | the exact 350.0 / 400.0 speeds |

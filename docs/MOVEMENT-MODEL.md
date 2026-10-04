@@ -94,6 +94,14 @@ V = √(2·750·56) = 289.8. On the jump tick v_z is set to V − ½g·dt before
 split-gravity air move, so the position advances (V − g·dt)·dt and the tick
 ends at V − 1.5·g·dt. Rise: 53.5 @60 fps, 55.0 @144 fps.
 
+### Jump fatigue (session 4, 361 jumps, rms 2.9 u/s)
+After *landing from a jump* (falls, walk-offs and mantles do not count), the
+next jump's height is `0.30 × jump_height` if taken within 0.14 s on the
+ground, recovering linearly to full height at 0.735 s. Holding crouch does
+not change it. Jumps out of a slide multiply launch speed by 0.944 (fresh
+273.5, fatigued 150.0). Landing with crouch held re-enters the slide on the
+landing tick, so spam-jumping while crouched at speed chains slide-jumps.
+
 ### Crouch
 Ground: `crouch_frac` 0→1 in 0.383 s, 1→0 in 0.217 s; max speed blends
 run/sprint → 92; crouched hull once fully down; standing needs headroom.

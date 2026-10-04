@@ -68,6 +68,15 @@ pub struct MovementConfig {
     /// No lurch above this horizontal speed (S21 `jump_grace_cutoff_speed`).
     pub lurch_speed_cutoff: f32,
 
+    /// Jump fatigue: after landing from a jump, jump *height* is
+    /// `jump_fatigue_min_frac` until `jump_fatigue_start` seconds on the ground,
+    /// then recovers linearly to full at `jump_fatigue_end`.
+    pub jump_fatigue_min_frac: f32,
+    pub jump_fatigue_start: f32,
+    pub jump_fatigue_end: f32,
+    /// Launch-speed multiplier for jumps out of a slide.
+    pub slide_jump_mult: f32,
+
     /// Source `sv_airaccelerate`. `[source]`
     pub air_accel: f32,
     /// Wish-speed cap used for the air-accel *projection* test (Source's 30). `[source]`
@@ -122,6 +131,10 @@ impl MovementConfig {
         lurch_peak_time: sheet::LURCH_PEAK_TIME,
         lurch_window: sheet::LURCH_WINDOW,
         lurch_speed_cutoff: sheet::LURCH_SPEED_CUTOFF,
+        jump_fatigue_min_frac: sheet::JUMP_FATIGUE_MIN_FRAC,
+        jump_fatigue_start: sheet::JUMP_FATIGUE_START,
+        jump_fatigue_end: sheet::JUMP_FATIGUE_END,
+        slide_jump_mult: sheet::SLIDE_JUMP_MULT,
         air_accel: sheet::AIR_ACCEL,
         air_speed_cap: sheet::AIR_SPEED_CAP,
         step_height: sheet::STEP_HEIGHT,
@@ -151,6 +164,14 @@ impl MovementConfig {
     /// Vertical launch speed that peaks at exactly `height` under `gravity`.
     pub fn jump_speed(&self, height: f32) -> f32 {
         apex_math::sqrt(2.0 * self.gravity * height)
+    }
+
+    /// Jump height fraction after `ground_time` seconds on the ground since a
+    /// landing that ended a jump (1.0 when not fatigued).
+    pub fn jump_fatigue_frac(&self, ground_time: f32) -> f32 {
+        let span = (self.jump_fatigue_end - self.jump_fatigue_start).max(1e-6);
+        let a = ((ground_time - self.jump_fatigue_start) / span).clamp(0.0, 1.0);
+        self.jump_fatigue_min_frac + (1.0 - self.jump_fatigue_min_frac) * a
     }
 
     /// Lurch strength for a press `t` seconds after leaving the ground.

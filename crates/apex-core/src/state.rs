@@ -56,6 +56,10 @@ pub struct MovementState {
     /// Movement axes on the previous tick (for directional press edges → lurch).
     pub prev_forward: f32,
     pub prev_right: f32,
+    /// The current airtime started with a jump.
+    pub air_from_jump: bool,
+    /// The last landing ended an airtime that started with a jump (jump fatigue applies).
+    pub landed_from_jump: bool,
 }
 
 impl MovementState {

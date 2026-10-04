@@ -548,7 +548,11 @@ pub fn settle(s: &mut MovementState, cfg: &MovementConfig, world: &impl Collisio
 
 /// Decide Ground vs Air by probing just below the feet (Source `CategorizePosition`).
 fn categorize(s: &mut MovementState, cfg: &MovementConfig, world: &impl CollisionWorld) {
-    if s.velocity.z > cfg.non_jump_velocity {
+    // Airborne and still rising: never snapped back down. Source's 140 u/s
+    // rule alone ate fatigued jumps (~142 u/s at takeoff fell below 140 on
+    // the next tick, within the ground probe); S21 traces keep them airborne.
+    let rising_in_air = s.mode == MoveMode::Air && s.velocity.z > 0.0;
+    if s.velocity.z > cfg.non_jump_velocity || rising_in_air {
         s.mode = MoveMode::Air;
         s.ground_normal = Vec3::ZERO;
         return;

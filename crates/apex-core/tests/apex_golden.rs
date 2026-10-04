@@ -379,3 +379,35 @@ fn bhop_penalty_matches_trace() {
     // ...and the unfatigued slide long jump still raises to 350.
     assert!((bhop_launch_speed(326.0, 29.4, true) - 350.0).abs() < 0.05);
 }
+
+#[test]
+fn fatigued_slide_hop_is_not_eaten_by_the_ground_check() {
+    // Sandbox recording 2026-10-04: a fatigued slide-jump (vz ~142 at 144
+    // fps) dropped below 140 on its second tick and was snapped back to the
+    // floor. In S21 these hops (pvz 143.1) stay up for the whole arc.
+    let w = flat();
+    let cfg = MovementConfig::default();
+    let mut s = grounded(&w, &cfg, Vec3::new(300.0, 0.0, 0.0));
+    s.sliding = true;
+    s.crouched = true;
+    s.crouch_frac = 1.0;
+    s.landed_from_jump = true;
+    s.time_on_ground = 0.0;
+    let crouch = input(0.0, 0.0, Buttons::CROUCH);
+    let (mut s, r) = step_with_report(
+        &s,
+        &input(0.0, 0.0, Buttons::CROUCH | Buttons::JUMP),
+        &cfg,
+        &w,
+        DT144,
+    );
+    assert!(r.jumped);
+    assert!(s.velocity.z < 150.0, "fatigued: vz {}", s.velocity.z);
+    let mut air_ticks = 1;
+    while !s.on_ground() && air_ticks < 200 {
+        s = step(&s, &crouch, &cfg, &w, DT144);
+        air_ticks += 1;
+    }
+    // ~2·vz/g = 0.38 s = ~54 ticks at 144 fps.
+    assert!(air_ticks > 45, "landed after {air_ticks} ticks");
+}

@@ -32,6 +32,8 @@ pub struct StepReport {
     /// Horizontal unit wish direction (zero if no movement input).
     pub wish_dir: Vec3,
     pub wish_speed: f32,
+    /// Velocity at the start of the tick (landing speed for fall stun).
+    pub entry_velocity: Vec3,
     /// Speed removed by friction this tick (u/s).
     pub friction_drop: f32,
     /// Speed added by (air-)acceleration this tick (u/s).
@@ -84,6 +86,7 @@ pub fn step_with_report(
     let mut s = *state;
     let mut rep = StepReport {
         dt,
+        entry_velocity: state.velocity,
         ..StepReport::default()
     };
     let pressed = input.buttons.pressed_since(s.prev_buttons);
@@ -102,12 +105,19 @@ pub fn step_with_report(
         categorize(&mut s, cfg, world);
     }
 
-    let base_speed = if input.buttons.contains(Buttons::SPRINT) && input.forward > 0.0 {
+    // A fall stun holds you at walk speed until it has mostly worn off
+    // (S21: walk base until ~0.85 s of a full stun, then sprint).
+    let stun = fall_stun_factor(s.fall_stun, cfg);
+    let base_speed = if input.buttons.contains(Buttons::SPRINT)
+        && input.forward > 0.0
+        && stun >= cfg.fall_stun_sprint_factor
+    {
         cfg.sprint_speed
     } else {
         cfg.run_speed
     };
-    let max_speed = base_speed + (cfg.crouch_speed - base_speed) * s.crouch_frac;
+    let max_speed = (base_speed + (cfg.crouch_speed - base_speed) * s.crouch_frac)
+        * fall_stun_factor(s.fall_stun, cfg);
     let wish_speed = max_speed * input_mag;
     rep.wish_dir = wish_dir;
     rep.wish_speed = wish_speed;
@@ -335,6 +345,24 @@ fn finish_tick(
     rep.landed = !was_on_ground && !rep.jumped && s.on_ground();
     if rep.landed {
         s.landed_from_jump = s.air_from_jump;
+        // Fall stun (session 8 walk-offs + wiki): strength from the landing
+        // speed into the ground (slopes soften it), 0 below a 300 u fall,
+        // full from 800 u. The landing clamps horizontal speed to the
+        // stunned max speed: a full stun stops you dead (300 -> 0).
+        let into = -rep.entry_velocity.dot(s.ground_normal);
+        let height = into.max(0.0).powi(2) / (2.0 * cfg.gravity);
+        let range = (cfg.fall_stun_full_height - cfg.fall_stun_min_height).max(1e-3);
+        let strength = ((height - cfg.fall_stun_min_height) / range).clamp(0.0, 1.0);
+        if strength > 0.0 {
+            s.fall_stun = Some((0.0, strength));
+            let cap = cfg.sprint_speed * fall_stun_factor(s.fall_stun, cfg);
+            let h = s.velocity.horizontal();
+            let speed = h.length();
+            if speed > cap && speed > 0.0 {
+                s.velocity.x *= cap / speed;
+                s.velocity.y *= cap / speed;
+            }
+        }
     }
     if was_on_ground && !s.on_ground() && !rep.jumped {
         // Walked off a ledge (or started a mantle): not a jump. Coyote time
@@ -384,6 +412,10 @@ fn finish_tick(
         s.lurch_t += dt;
     }
     s.time_since_slide_boost = (s.time_since_slide_boost + dt).min(f32::MAX / 2.0);
+    if let Some((t, strength)) = s.fall_stun {
+        let t = t + dt;
+        s.fall_stun = (t < strength.sqrt() * cfg.fall_stun_duration).then_some((t, strength));
+    }
     if s.sliding {
         s.slide_t += dt;
     }
@@ -392,6 +424,19 @@ fn finish_tick(
     s.prev_right = input.right;
     s.tick += 1;
     s.time += f64::from(dt);
+}
+
+/// Max-speed multiplier during a fall stun: 1 − s·(1 − (t/T)²), so a full
+/// stun recovers as t² (S21: 0.48 s -> 0.24, 0.97 s -> 0.94) and a strength-s
+/// stun starts at 1 − s (0.276 -> 0.72 measured). It ends after √s·T.
+pub fn fall_stun_factor(stun: Option<(f32, f32)>, cfg: &MovementConfig) -> f32 {
+    match stun {
+        Some((t, strength)) => {
+            let u = (t / cfg.fall_stun_duration.max(1e-3)).min(1.0);
+            1.0 - strength * (1.0 - u * u)
+        }
+        None => 1.0,
+    }
 }
 
 /// Ground friction (Source `Friction`). Returns the speed removed.

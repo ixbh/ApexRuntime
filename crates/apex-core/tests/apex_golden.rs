@@ -614,3 +614,50 @@ fn deadslide_matches_bot_sweep() {
         }
     }
 }
+
+#[test]
+fn fall_stun_matches_walkoffs() {
+    // Session 8: sprinting off a ~1186 u drop (landing vz -1331) stops you
+    // dead; max speed recovers as walk/sprint x t^2 (0.48 s: 48, 0.83 s: 136,
+    // 0.97 s: 281) and is back to 299 at 0.994 s. Speed tracks it.
+    let w = flat();
+    let cfg = MovementConfig::default();
+    let dt = 1.0 / 165.0;
+    let mut s = MovementState::at(Vec3::new(0.0, 0.0, 1186.0));
+    s.velocity = Vec3::new(280.0, 0.0, 0.0);
+    let run = input(1.0, 0.0, Buttons::SPRINT);
+    let mut landed_at = None;
+    let mut speeds = Vec::new();
+    for i in 0..3000 {
+        let (n, r) = step_with_report(&s, &run, &cfg, &w, dt);
+        s = n;
+        if r.landed && landed_at.is_none() {
+            landed_at = Some(i);
+            assert!(
+                s.horizontal_speed() < 1.0,
+                "stopped dead: {}",
+                s.horizontal_speed()
+            );
+        }
+        if let Some(l) = landed_at {
+            speeds.push(((i - l) as f32 * dt, s.horizontal_speed()));
+            if i - l > 400 {
+                break;
+            }
+        }
+    }
+    let at = |t: f32| speeds.iter().find(|(x, _)| *x >= t).unwrap().1;
+    assert!(at(0.48) <= 49.0, "0.48 s: {}", at(0.48));
+    assert!(at(0.83) <= 139.0, "0.83 s: {}", at(0.83));
+    // Actual speed lags the max speed once sprint returns: 5 runs measured
+    // 191-192 at 1.0 s, 225-228 at 1.25 s, 253-257 at 1.5 s.
+    for (t, want) in [(1.0, 191.5), (1.25, 227.0), (1.5, 255.0)] {
+        assert!((at(t) - want).abs() < 20.0, "{t} s: {} vs {want}", at(t));
+    }
+    assert!(at(2.0) > 298.0, "2 s: {}", at(2.0));
+    // A soft landing (vz -500, under the 300 u threshold) does not stun.
+    let mut s = MovementState::at(Vec3::new(0.0, 0.0, 1.0));
+    s.velocity = Vec3::new(280.0, 0.0, -500.0);
+    let (s, r) = step_with_report(&s, &run, &cfg, &w, dt);
+    assert!(r.landed && s.fall_stun.is_none() && s.horizontal_speed() > 270.0);
+}

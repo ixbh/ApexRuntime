@@ -87,6 +87,14 @@ pub struct MovementConfig {
     /// Slide-jumping before this long into a slide (while above
     /// `slide_jump_min_speed`) loses that slide's boost: a deadslide.
     pub deadslide_time: f32,
+    /// Fall stun: strength from the equivalent fall height of the landing
+    /// speed into the ground (0 at min, 1 at full); max speed recovers as
+    /// t² over `fall_stun_duration`.
+    pub fall_stun_min_height: f32,
+    pub fall_stun_full_height: f32,
+    pub fall_stun_duration: f32,
+    /// Sprint is allowed again once the stun factor reaches this.
+    pub fall_stun_sprint_factor: f32,
     pub bhop_speed_penalty: f32,
 
     /// Mantle: duration = base + per_unit × ledge height above the feet.
@@ -237,6 +245,10 @@ impl MovementConfig {
         bhop_skip_time: sheet::BHOP_SKIP_TIME,
         coyote_time: sheet::COYOTE_TIME,
         deadslide_time: sheet::DEADSLIDE_TIME,
+        fall_stun_min_height: sheet::FALL_STUN_MIN_HEIGHT,
+        fall_stun_full_height: sheet::FALL_STUN_FULL_HEIGHT,
+        fall_stun_duration: sheet::FALL_STUN_DURATION,
+        fall_stun_sprint_factor: sheet::FALL_STUN_SPRINT_FACTOR,
         bhop_speed_penalty: sheet::BHOP_SPEED_PENALTY,
         mantle_duration_base: sheet::MANTLE_DURATION_BASE,
         mantle_duration_per_unit: sheet::MANTLE_DURATION_PER_UNIT,

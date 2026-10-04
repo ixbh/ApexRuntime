@@ -123,6 +123,8 @@ pub struct MovementState {
     /// (for the deadslide rule).
     pub slide_t: f32,
     pub slide_boost_given: f32,
+    /// Fall stun after a hard landing: (seconds since landing, strength 0..1).
+    pub fall_stun: Option<(f32, f32)>,
 }
 
 /// Coyote-time bookkeeping (see `MovementState::coyote`).

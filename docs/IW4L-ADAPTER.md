@@ -46,16 +46,24 @@ pinned to the commit above (no local paths).
   git): fov 120; sensitivity 0.600 (= Apex 1.63: IW4 scales hipfire by
   tan(fov/2)/tan(32.5 deg) = 2.72 at 120); MWHEELUP +forward, MWHEELDOWN
   +gostand, CTRL/C +movedown, L togglecrouch.
-- **Run**: `.un-apex.ps1` (Rust, no bots; `-Map`, `-Bots N`, `-Classic`,
+- **Run**: `.\run-apex.ps1` (Rust, no bots; `-Map`, `-Bots N`, `-Classic`,
   `-Build`). `.env` holds `IW4L_GAMES=D:\SteamLibrary\steamapps\common\Call of Duty Modern Warfare 2`.
   PowerShell gotcha: Set-Location does not change a launched exe's cwd.
 
 ## Next (the "Apex inside MW2" plan; personal-use assets in `F:\ApexContent`)
 
-1. **Feel without assets**: camera (landing dip, slide tilt/lower view,
-   mantle/climb pull), weapon sway/inertia, sprint pose, FOV.
-2. **Asset pipeline**: glTF via Bevy; first the R-99 viewmodel from
-   `F:\ApexContent\weapons99\` (user downloads it from Sketchfab).
+1. **Feel without assets**: first pass done (IW4L bfbd79b). `sim::apex`
+   publishes the move kind (slide/mantle/climb) + mantle progress in the
+   unused IW4 mantle fields (`playerstate_iw4::apex_view`);
+   `render_anim::anim::apex_feel` adds slide lean + gun cant, mantle pitch
+   dip + dropped gun, climb bob + lowered gun, landing camera punch, FOV
+   boost at speed (sens unchanged). Amplitudes hand-tuned in `Tuning`;
+   `IW4L_APEX_FEEL=0` disables. Tune from play tests.
+2. **Asset pipeline**: primary source is the offline Flowstate install
+   (`F:\R5Flowstate\paks\Win64`, modern content), exported by the user
+   with a community tool into `F:\ApexContent`; never the Steam install
+   (fallback: copy one file out with the game closed). Sketchfab glTFs
+   optional for early tests.
 3. Apex gun behaviour (fire rate, recoil, damage, mags, attachments).
 4. Characters + animations driven by Apex movement (slide/climb/mantle poses).
 5. Abilities (Pathfinder grapple, Octane pad first).

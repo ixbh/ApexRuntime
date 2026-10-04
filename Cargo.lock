@@ -202,6 +202,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "apex-inputbot"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "windows-sys 0.60.2",
+]
+
+[[package]]
 name = "apex-math"
 version = "0.1.0"
 dependencies = [

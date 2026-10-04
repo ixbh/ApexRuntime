@@ -1,0 +1,23 @@
+[package]
+name = "apex-inputbot"
+description = "Scripted keyboard/mouse input player for OFFLINE R5Flowstate capture sessions only."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+# Not the workspace lints: the Win32 calls need `unsafe`, confined to win.rs.
+[lints.rust]
+unsafe_code = "deny"

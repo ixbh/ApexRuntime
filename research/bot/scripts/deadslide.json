@@ -1,0 +1,1268 @@
+{
+ "name": "deadslide",
+ "sens": 1.63,
+ "countdown_s": 5,
+ "gap_ms": 700,
+ "attempts": [
+  {
+   "label": "deadslide jump 0 frames (0 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1500.0,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2400.0,
+     "up": "l"
+    },
+    {
+     "at_ms": 3000.0,
+     "up": "w"
+    },
+    {
+     "at_ms": 3200.0,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 0 frames (0 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1500.0,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2400.0,
+     "up": "l"
+    },
+    {
+     "at_ms": 3000.0,
+     "up": "w"
+    },
+    {
+     "at_ms": 3200.0,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 2 frames (12 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1512.121212121212,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2412.121212121212,
+     "up": "l"
+    },
+    {
+     "at_ms": 3012.121212121212,
+     "up": "w"
+    },
+    {
+     "at_ms": 3212.121212121212,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 2 frames (12 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1512.121212121212,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2412.121212121212,
+     "up": "l"
+    },
+    {
+     "at_ms": 3012.121212121212,
+     "up": "w"
+    },
+    {
+     "at_ms": 3212.121212121212,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 4 frames (24 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1524.2424242424242,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2424.242424242424,
+     "up": "l"
+    },
+    {
+     "at_ms": 3024.242424242424,
+     "up": "w"
+    },
+    {
+     "at_ms": 3224.242424242424,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 4 frames (24 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1524.2424242424242,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2424.242424242424,
+     "up": "l"
+    },
+    {
+     "at_ms": 3024.242424242424,
+     "up": "w"
+    },
+    {
+     "at_ms": 3224.242424242424,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 6 frames (36 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1536.3636363636363,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2436.363636363636,
+     "up": "l"
+    },
+    {
+     "at_ms": 3036.363636363636,
+     "up": "w"
+    },
+    {
+     "at_ms": 3236.363636363636,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 6 frames (36 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1536.3636363636363,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2436.363636363636,
+     "up": "l"
+    },
+    {
+     "at_ms": 3036.363636363636,
+     "up": "w"
+    },
+    {
+     "at_ms": 3236.363636363636,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 8 frames (48 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1548.4848484848485,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2448.4848484848485,
+     "up": "l"
+    },
+    {
+     "at_ms": 3048.4848484848485,
+     "up": "w"
+    },
+    {
+     "at_ms": 3248.4848484848485,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 8 frames (48 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1548.4848484848485,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2448.4848484848485,
+     "up": "l"
+    },
+    {
+     "at_ms": 3048.4848484848485,
+     "up": "w"
+    },
+    {
+     "at_ms": 3248.4848484848485,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 10 frames (61 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1560.6060606060605,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2460.6060606060605,
+     "up": "l"
+    },
+    {
+     "at_ms": 3060.6060606060605,
+     "up": "w"
+    },
+    {
+     "at_ms": 3260.6060606060605,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 10 frames (61 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1560.6060606060605,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2460.6060606060605,
+     "up": "l"
+    },
+    {
+     "at_ms": 3060.6060606060605,
+     "up": "w"
+    },
+    {
+     "at_ms": 3260.6060606060605,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 12 frames (73 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1572.7272727272727,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2472.727272727273,
+     "up": "l"
+    },
+    {
+     "at_ms": 3072.727272727273,
+     "up": "w"
+    },
+    {
+     "at_ms": 3272.727272727273,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 12 frames (73 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1572.7272727272727,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2472.727272727273,
+     "up": "l"
+    },
+    {
+     "at_ms": 3072.727272727273,
+     "up": "w"
+    },
+    {
+     "at_ms": 3272.727272727273,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 14 frames (85 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1584.8484848484848,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2484.848484848485,
+     "up": "l"
+    },
+    {
+     "at_ms": 3084.848484848485,
+     "up": "w"
+    },
+    {
+     "at_ms": 3284.848484848485,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 14 frames (85 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1584.8484848484848,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2484.848484848485,
+     "up": "l"
+    },
+    {
+     "at_ms": 3084.848484848485,
+     "up": "w"
+    },
+    {
+     "at_ms": 3284.848484848485,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 16 frames (97 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1596.969696969697,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2496.969696969697,
+     "up": "l"
+    },
+    {
+     "at_ms": 3096.969696969697,
+     "up": "w"
+    },
+    {
+     "at_ms": 3296.969696969697,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 16 frames (97 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1596.969696969697,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2496.969696969697,
+     "up": "l"
+    },
+    {
+     "at_ms": 3096.969696969697,
+     "up": "w"
+    },
+    {
+     "at_ms": 3296.969696969697,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 18 frames (109 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1609.090909090909,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2509.090909090909,
+     "up": "l"
+    },
+    {
+     "at_ms": 3109.090909090909,
+     "up": "w"
+    },
+    {
+     "at_ms": 3309.090909090909,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 18 frames (109 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1609.090909090909,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2509.090909090909,
+     "up": "l"
+    },
+    {
+     "at_ms": 3109.090909090909,
+     "up": "w"
+    },
+    {
+     "at_ms": 3309.090909090909,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 20 frames (121 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1621.2121212121212,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2521.212121212121,
+     "up": "l"
+    },
+    {
+     "at_ms": 3121.212121212121,
+     "up": "w"
+    },
+    {
+     "at_ms": 3321.212121212121,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 20 frames (121 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1621.2121212121212,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2521.212121212121,
+     "up": "l"
+    },
+    {
+     "at_ms": 3121.212121212121,
+     "up": "w"
+    },
+    {
+     "at_ms": 3321.212121212121,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 22 frames (133 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1633.3333333333333,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2533.333333333333,
+     "up": "l"
+    },
+    {
+     "at_ms": 3133.333333333333,
+     "up": "w"
+    },
+    {
+     "at_ms": 3333.333333333333,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 22 frames (133 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1633.3333333333333,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2533.333333333333,
+     "up": "l"
+    },
+    {
+     "at_ms": 3133.333333333333,
+     "up": "w"
+    },
+    {
+     "at_ms": 3333.333333333333,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 24 frames (145 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1645.4545454545455,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2545.4545454545455,
+     "up": "l"
+    },
+    {
+     "at_ms": 3145.4545454545455,
+     "up": "w"
+    },
+    {
+     "at_ms": 3345.4545454545455,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 24 frames (145 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1645.4545454545455,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2545.4545454545455,
+     "up": "l"
+    },
+    {
+     "at_ms": 3145.4545454545455,
+     "up": "w"
+    },
+    {
+     "at_ms": 3345.4545454545455,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 26 frames (158 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1657.5757575757575,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2557.5757575757575,
+     "up": "l"
+    },
+    {
+     "at_ms": 3157.5757575757575,
+     "up": "w"
+    },
+    {
+     "at_ms": 3357.5757575757575,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 26 frames (158 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1657.5757575757575,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2557.5757575757575,
+     "up": "l"
+    },
+    {
+     "at_ms": 3157.5757575757575,
+     "up": "w"
+    },
+    {
+     "at_ms": 3357.5757575757575,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 28 frames (170 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1669.6969696969697,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2569.69696969697,
+     "up": "l"
+    },
+    {
+     "at_ms": 3169.69696969697,
+     "up": "w"
+    },
+    {
+     "at_ms": 3369.69696969697,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 28 frames (170 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1669.6969696969697,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2569.69696969697,
+     "up": "l"
+    },
+    {
+     "at_ms": 3169.69696969697,
+     "up": "w"
+    },
+    {
+     "at_ms": 3369.69696969697,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 30 frames (182 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1681.8181818181818,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2581.818181818182,
+     "up": "l"
+    },
+    {
+     "at_ms": 3181.818181818182,
+     "up": "w"
+    },
+    {
+     "at_ms": 3381.818181818182,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 30 frames (182 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1681.8181818181818,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2581.818181818182,
+     "up": "l"
+    },
+    {
+     "at_ms": 3181.818181818182,
+     "up": "w"
+    },
+    {
+     "at_ms": 3381.818181818182,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 32 frames (194 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1693.939393939394,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2593.939393939394,
+     "up": "l"
+    },
+    {
+     "at_ms": 3193.939393939394,
+     "up": "w"
+    },
+    {
+     "at_ms": 3393.939393939394,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 32 frames (194 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1693.939393939394,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2593.939393939394,
+     "up": "l"
+    },
+    {
+     "at_ms": 3193.939393939394,
+     "up": "w"
+    },
+    {
+     "at_ms": 3393.939393939394,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 34 frames (206 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1706.060606060606,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2606.060606060606,
+     "up": "l"
+    },
+    {
+     "at_ms": 3206.060606060606,
+     "up": "w"
+    },
+    {
+     "at_ms": 3406.060606060606,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 34 frames (206 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1706.060606060606,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2606.060606060606,
+     "up": "l"
+    },
+    {
+     "at_ms": 3206.060606060606,
+     "up": "w"
+    },
+    {
+     "at_ms": 3406.060606060606,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 36 frames (218 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1718.1818181818182,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2618.181818181818,
+     "up": "l"
+    },
+    {
+     "at_ms": 3218.181818181818,
+     "up": "w"
+    },
+    {
+     "at_ms": 3418.181818181818,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 36 frames (218 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1718.1818181818182,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2618.181818181818,
+     "up": "l"
+    },
+    {
+     "at_ms": 3218.181818181818,
+     "up": "w"
+    },
+    {
+     "at_ms": 3418.181818181818,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 38 frames (230 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1730.3030303030303,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2630.30303030303,
+     "up": "l"
+    },
+    {
+     "at_ms": 3230.30303030303,
+     "up": "w"
+    },
+    {
+     "at_ms": 3430.30303030303,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 38 frames (230 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1730.3030303030303,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2630.30303030303,
+     "up": "l"
+    },
+    {
+     "at_ms": 3230.30303030303,
+     "up": "w"
+    },
+    {
+     "at_ms": 3430.30303030303,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 40 frames (242 ms) after crouch, run 1",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1742.4242424242425,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2642.4242424242425,
+     "up": "l"
+    },
+    {
+     "at_ms": 3242.4242424242425,
+     "up": "w"
+    },
+    {
+     "at_ms": 3442.4242424242425,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "deadslide jump 40 frames (242 ms) after crouch, run 2",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1742.4242424242425,
+     "tap": "space"
+    },
+    {
+     "at_ms": 2642.4242424242425,
+     "up": "l"
+    },
+    {
+     "at_ms": 3242.4242424242425,
+     "up": "w"
+    },
+    {
+     "at_ms": 3442.4242424242425,
+     "turn_right_deg": 180.0,
+     "over_ms": 250
+    }
+   ]
+  }
+ ]
+}

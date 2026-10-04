@@ -1,0 +1,710 @@
+{
+ "name": "lurch_angles",
+ "sens": 1.63,
+ "countdown_s": 5,
+ "gap_ms": 900,
+ "attempts": [
+  {
+   "label": "lurch W notch at 150 ms, view 15 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 1789.3939393939395,
+     "turn_right_deg": 15.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 1801.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 165.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 150 ms, view 30 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 1789.3939393939395,
+     "turn_right_deg": 30.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 1801.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 150.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 150 ms, view 45 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 1789.3939393939395,
+     "turn_right_deg": 45.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 1801.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 135.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 150 ms, view 60 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 1789.3939393939395,
+     "turn_right_deg": 60.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 1801.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 120.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 150 ms, view 90 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 1789.3939393939395,
+     "turn_right_deg": 90.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 1801.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 90.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 150 ms, view 120 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 1789.3939393939395,
+     "turn_right_deg": 120.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 1801.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 60.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 300 ms, view 15 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 1939.3939393939395,
+     "turn_right_deg": 15.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 1951.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 165.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 300 ms, view 30 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 1939.3939393939395,
+     "turn_right_deg": 30.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 1951.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 150.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 300 ms, view 45 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 1939.3939393939395,
+     "turn_right_deg": 45.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 1951.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 135.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 300 ms, view 60 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 1939.3939393939395,
+     "turn_right_deg": 60.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 1951.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 120.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 300 ms, view 90 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 1939.3939393939395,
+     "turn_right_deg": 90.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 1951.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 90.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 300 ms, view 120 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 1939.3939393939395,
+     "turn_right_deg": 120.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 1951.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 60.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 400 ms, view 15 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 2039.3939393939395,
+     "turn_right_deg": 15.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 2051.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 165.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 400 ms, view 30 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 2039.3939393939395,
+     "turn_right_deg": 30.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 2051.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 150.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 400 ms, view 45 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 2039.3939393939395,
+     "turn_right_deg": 45.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 2051.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 135.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 400 ms, view 60 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 2039.3939393939395,
+     "turn_right_deg": 60.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 2051.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 120.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 400 ms, view 90 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 2039.3939393939395,
+     "turn_right_deg": 90.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 2051.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 90.0,
+     "over_ms": 250
+    }
+   ]
+  },
+  {
+   "label": "lurch W notch at 400 ms, view 120 deg right",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1500.0,
+     "down": "l"
+    },
+    {
+     "at_ms": 1651.5151515151515,
+     "tap": "space"
+    },
+    {
+     "at_ms": 1671.5151515151515,
+     "up": "w"
+    },
+    {
+     "at_ms": 1691.5151515151515,
+     "up": "l"
+    },
+    {
+     "at_ms": 2039.3939393939395,
+     "turn_right_deg": 120.0,
+     "over_ms": 0
+    },
+    {
+     "at_ms": 2051.5151515151515,
+     "wheel": 1
+    },
+    {
+     "at_ms": 3051.5151515151515,
+     "turn_right_deg": 60.0,
+     "over_ms": 250
+    }
+   ]
+  }
+ ]
+}

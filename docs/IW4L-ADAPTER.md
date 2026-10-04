@@ -28,24 +28,37 @@ pinned to the commit above (no local paths).
 - Tests run apex movement through a stand-in IW4L backend (settle, sprint to
   299, jump, playerState sync).
 
-## Next
+## Done (milestones 2-3, IW4L working copy `F:\Dev\iw4l-apex`, branch `apex-movement`)
 
-2. **Hook it into IW4L (a local branch of IW4L, not upstream yet).** In
-   `sim::step`, behind a cvar/feature `apex_movement`: keep a per-player
-   `apex_core::MovementState` (an ECS component next to the player row),
-   call `adopt_from_playerstate` -> `apex_core::step(…, Iw4Collision::new(&backend), cmd_dt)`
-   -> `sync_to_playerstate`, instead of `pmove`. Keep IW4's view-angle,
-   weapon, ADS and event code running around it.
-3. **Prediction / networking.** The client predicts with the same step, so
-   the apex state must survive snapshot adoption: either add the few fields
-   that matter (lurch clock, slide/coyote/stun timers, climb/mantle) to what
-   IW4L snapshots, or re-derive them. This is the main engineering job.
-4. **Game feel glue:** jump/land events and footsteps, sprint flag for weapon
-   lowering, mantle/climb animations (IW4 has a mantle anim set), HUD speed.
-   Prone and IW4 ladders disabled or mapped.
-5. **Playtest** on MW2 maps (Rust, Terminal, Highrise…), tune what the maps
-   need (hull height, ledge heights vs Apex mantle limits).
+`C:\Dev\...` are junctions to `F:\Dev\...` (moved for disk space).
+- **Apex replaces IW4 movement entirely** (`IW4L_APEX_MOVEMENT=1`):
+  `crates/sim/src/apex.rs::pmove` runs instead of `movement_iw4::pmove` for
+  normal players; IW4 keeps only view angles, ADS, hold breath, weapon sprint
+  state, timers, footsteps. Other pm_types (spectator, dead, linked, last
+  stand) still run IW4.
+- **Prediction rewind**: per-client Apex state history by command_time,
+  restored when the client adopts a snapshot. Scripted run: 81 prediction
+  deviations (max 26.9 u) -> 2 (max 2.2 u). Fixed the rubber-banding.
+- **Input**: wheel notches count as a full frame (scroll-up +forward taps
+  move -> tap strafing); Apex auto-sprint on (`IW4L_APEX_AUTOSPRINT=0` gives
+  press-to-sprint latch, never MW2 hold-to-sprint).
+- **Player settings** (`target\play\iw4l-artifacts\settings.cfg`, not in
+  git): fov 120; sensitivity 0.600 (= Apex 1.63: IW4 scales hipfire by
+  tan(fov/2)/tan(32.5 deg) = 2.72 at 120); MWHEELUP +forward, MWHEELDOWN
+  +gostand, CTRL/C +movedown, L togglecrouch.
+- **Run**: `.un-apex.ps1` (Rust, no bots; `-Map`, `-Bots N`, `-Classic`,
+  `-Build`). `.env` holds `IW4L_GAMES=D:\SteamLibrary\steamapps\common\Call of Duty Modern Warfare 2`.
+  PowerShell gotcha: Set-Location does not change a launched exe's cwd.
 
-## Open questions for the user
-- Do you own MW2 (2009) multiplayer on PC? IW4L needs its files.
-- Local-only fork for you, or eventually a contribution upstream?
+## Next (the "Apex inside MW2" plan; personal-use assets in `F:\ApexContent`)
+
+1. **Feel without assets**: camera (landing dip, slide tilt/lower view,
+   mantle/climb pull), weapon sway/inertia, sprint pose, FOV.
+2. **Asset pipeline**: glTF via Bevy; first the R-99 viewmodel from
+   `F:\ApexContent\weapons99\` (user downloads it from Sketchfab).
+3. Apex gun behaviour (fire rate, recoil, damage, mags, attachments).
+4. Characters + animations driven by Apex movement (slide/climb/mantle poses).
+5. Abilities (Pathfinder grapple, Octane pad first).
+6. Items/loot, Apex HUD, shields/heals, SFX.
+Known gaps: no slide/climb/mantle animations yet (IW4 anims follow MW2
+movement); MW2 ladders removed with its movement.

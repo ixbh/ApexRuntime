@@ -25,6 +25,9 @@ use playerstate_iw4::{ENTITYNUM_NONE, PlayerState, UserCmd, buttons, pm_flags};
 
 /// IW4L's player movement content mask (what `sim::step` passes for pmove).
 pub const PLAYER_TRACEMASK: u32 = 0x0281_0011;
+/// usercmd button bit for the Apex mantle boost key (`+mantleboost` in the
+/// IW4L working copy; IW4 itself leaves 0x40 unused).
+pub const MANTLE_BOOST_BUTTON: u32 = 0x40;
 /// Ground entity number for "standing on the world".
 pub const ENTITYNUM_WORLD: i32 = 0x7FE;
 /// IW4 player hull: 30 wide, 70 tall standing, 50 crouched.
@@ -94,6 +97,7 @@ pub fn input_from_cmd(cmd: &UserCmd, viewangles: [f32; 3]) -> MovementInput {
     b.set(Buttons::JUMP, cmd.buttons & buttons::JUMP != 0);
     b.set(Buttons::CROUCH, cmd.buttons & buttons::CROUCH != 0);
     b.set(Buttons::SPRINT, cmd.buttons & buttons::SPRINT != 0);
+    b.set(Buttons::MANTLE_BOOST, cmd.buttons & MANTLE_BOOST_BUTTON != 0);
     MovementInput {
         forward: axis(cmd.forwardmove),
         right: axis(cmd.rightmove),

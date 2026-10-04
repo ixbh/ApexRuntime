@@ -11,6 +11,8 @@ impl Buttons {
     pub const JUMP: Self = Self(1 << 0);
     pub const CROUCH: Self = Self(1 << 1);
     pub const SPRINT: Self = Self(1 << 2);
+    /// Mantle boost on its own key (only with `MovementConfig::mantle_boost_key`).
+    pub const MANTLE_BOOST: Self = Self(1 << 3);
 
     #[inline]
     pub const fn contains(self, other: Self) -> bool {

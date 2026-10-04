@@ -127,6 +127,9 @@ pub struct MovementConfig {
     pub mantle_boost_mult: f32,
     pub mantle_boost_jump_height: f32,
     pub mantle_boost_enabled: bool,
+    /// Mantle boost only from [`Buttons::MANTLE_BOOST`](crate::Buttons) in the
+    /// mantle pull; late jumps that miss the superglide are then plain jumps.
+    pub mantle_boost_key: bool,
 
     /// Wall climb: attaches when vz falls to `climb_attach_vz`, accelerates to
     /// the peak, then decays exponentially; ends with a push at the climb-space cutoff.
@@ -275,6 +278,7 @@ impl MovementConfig {
         mantle_boost_mult: sheet::MANTLE_BOOST_MULT,
         mantle_boost_jump_height: sheet::MANTLE_BOOST_JUMP_HEIGHT,
         mantle_boost_enabled: sheet::MANTLE_BOOST_ENABLED,
+        mantle_boost_key: sheet::MANTLE_BOOST_KEY,
         climb_attach_vz: sheet::CLIMB_ATTACH_VZ,
         climb_accel: sheet::CLIMB_ACCEL,
         climb_peak_speed: sheet::CLIMB_PEAK_SPEED,

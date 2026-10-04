@@ -748,3 +748,99 @@ fn no_ma_fatigue_bounce_on_a_chest_high_wall() {
     }
     assert!(mantled);
 }
+
+/// Mantle into a 48 u ledge at 165 fps with `cfg` and stop `ticks_before_end`
+/// ticks before the mantle ends.
+fn mantle_until(cfg: &MovementConfig, w: &BrushWorld, ticks_before_end: usize) -> MovementState {
+    let mut s = grounded_at(w, cfg, 0.0, 0.0);
+    for _ in 0..1000 {
+        let (n, r) = step_with_report(&s, &input(1.0, 0.0, SPRINT_W), cfg, w, DT165);
+        s = n;
+        if r.mantle_started {
+            break;
+        }
+    }
+    let m = s.mantle.expect("mantling");
+    let ticks_total = ((m.duration - m.t) / DT165).ceil() as usize;
+    for _ in 0..ticks_total - ticks_before_end {
+        s = step(&s, &input(1.0, 0.0, SPRINT_W), cfg, w, DT165);
+    }
+    s
+}
+
+fn boost_key_cfg() -> MovementConfig {
+    MovementConfig {
+        mantle_boost_key: true,
+        ..MovementConfig::default()
+    }
+}
+
+#[test]
+fn mantle_boost_key_boosts_anywhere_in_the_pull() {
+    // Boost key on: its own key in the pull (lax timing) gives the S21 boost.
+    let w = world_with_block(40.0, 48.0);
+    let cfg = boost_key_cfg();
+    let s = mantle_until(&cfg, &w, 30);
+    let (n, r) = step_with_report(
+        &s,
+        &input(1.0, 0.0, SPRINT_W.union(Buttons::MANTLE_BOOST)),
+        &cfg,
+        &w,
+        DT165,
+    );
+    assert!(r.mantle_boost && !r.superglide, "{r:?}");
+    assert!((n.horizontal_speed() - 388.7).abs() < 0.5, "{}", n.horizontal_speed());
+    assert!(n.lurch_disabled);
+}
+
+#[test]
+fn with_the_boost_key_a_missed_superglide_is_a_plain_jump_that_lurches() {
+    let w = world_with_block(40.0, 48.0);
+    let cfg = boost_key_cfg();
+    let mut s = mantle_until(&cfg, &w, 3);
+    let jump = input(1.0, 0.0, SPRINT_W.union(Buttons::JUMP));
+    s = step(&s, &jump, &cfg, &w, DT165);
+    // No crouch on the next tick: not a superglide, and no boost either.
+    let (mut s, r) = step_with_report(&s, &jump, &cfg, &w, DT165);
+    assert!(!r.mantle_boost && !r.superglide && r.jumped, "{r:?}");
+    assert!((s.horizontal_speed() - 299.0).abs() < 1.0, "{}", s.horizontal_speed());
+    assert!(!s.lurch_disabled);
+    for _ in 0..10 {
+        s = step(&s, &input(0.0, 0.0, Buttons::NONE), &cfg, &w, DT165);
+    }
+    let (_, r) = step_with_report(&s, &input(0.0, 1.0, Buttons::NONE), &cfg, &w, DT165);
+    assert!(r.lurch_k > 0.4, "lurch k {}", r.lurch_k);
+}
+
+#[test]
+fn with_the_boost_key_superglides_still_work() {
+    let w = world_with_block(40.0, 48.0);
+    let cfg = boost_key_cfg();
+    let mut s = mantle_until(&cfg, &w, 3);
+    let jump = input(1.0, 0.0, SPRINT_W.union(Buttons::JUMP));
+    s = step(&s, &jump, &cfg, &w, DT165);
+    let (s, r) = step_with_report(
+        &s,
+        &input(1.0, 0.0, SPRINT_W.union(Buttons::JUMP).union(Buttons::CROUCH)),
+        &cfg,
+        &w,
+        DT165,
+    );
+    assert!(r.superglide, "{r:?}");
+    assert!((s.horizontal_speed() - 460.0).abs() < 0.5);
+}
+
+#[test]
+fn boost_key_does_nothing_without_the_setting() {
+    let w = world_with_block(40.0, 48.0);
+    let cfg = MovementConfig::default();
+    let s = mantle_until(&cfg, &w, 30);
+    let (n, r) = step_with_report(
+        &s,
+        &input(1.0, 0.0, SPRINT_W.union(Buttons::MANTLE_BOOST)),
+        &cfg,
+        &w,
+        DT165,
+    );
+    assert!(!r.mantle_boost && n.mantle.is_some(), "{r:?}");
+}

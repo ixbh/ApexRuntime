@@ -286,7 +286,8 @@ fn superglide_exit(
 }
 
 /// S21 mantle boost: a late jump without the crouch. Measured |h| 388.7
-/// (= 1.3 × 299) and a 90 u jump.
+/// (= 1.3 × 299) and a 90 u jump. With `boost` false (or boosts disabled) it
+/// is a plain jump off the ledge at the exit speed.
 #[allow(clippy::too_many_arguments)]
 fn mantle_boost_exit(
     s: &mut MovementState,
@@ -296,9 +297,10 @@ fn mantle_boost_exit(
     wish_dir: Vec3,
     cfg: &MovementConfig,
     dt: f32,
+    boost: bool,
 ) {
     let base = mantle_exit_speed(m, input, cfg);
-    let (h, height) = if cfg.mantle_boost_enabled {
+    let (h, height) = if boost && cfg.mantle_boost_enabled {
         rep.mantle_boost = true;
         // Mantle boost turns lurch off until the next landing (wiki; S21: an
         // A press 0.25 s after a boost turned 0.0°).
@@ -339,10 +341,21 @@ pub fn mantle_tick(
             return;
         }
         if f32::from(n) + 1.0 >= cfg.superglide_crouch_ticks {
-            mantle_boost_exit(s, rep, &m, input, wish_dir, cfg, dt);
+            let boost = !cfg.mantle_boost_key;
+            mantle_boost_exit(s, rep, &m, input, wish_dir, cfg, dt, boost);
             return;
         }
         m.late_jump_ticks = Some(n + 1);
+    }
+
+    // Mantle boost on its own key: any time in the pull (lax timing).
+    if cfg.mantle_boost_key
+        && pressed.contains(Buttons::MANTLE_BOOST)
+        && m.late_jump_ticks.is_none()
+        && m.duration - m.t <= cfg.mantle_pull_time
+    {
+        mantle_boost_exit(s, rep, &m, input, wish_dir, cfg, dt, true);
+        return;
     }
 
     if pressed.contains(Buttons::JUMP) && m.late_jump_ticks.is_none() {
@@ -351,7 +364,8 @@ pub fn mantle_tick(
             // Crouch on this same tick does not count: the superglide needs
             // the crouch exactly one tick *after* the jump (decided next tick).
             if cfg.superglide_crouch_ticks <= 0.0 {
-                mantle_boost_exit(s, rep, &m, input, wish_dir, cfg, dt);
+                let boost = !cfg.mantle_boost_key;
+                mantle_boost_exit(s, rep, &m, input, wish_dir, cfg, dt, boost);
                 return;
             }
             m.late_jump_ticks = Some(0);

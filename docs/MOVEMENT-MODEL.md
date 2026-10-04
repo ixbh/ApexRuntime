@@ -152,3 +152,29 @@ about a frame long.
 
 Apex has no free wall-jump. "Wall bounces" are a jump input timed against
 wall-climb/hang state. They come after wall climb is modelled.
+
+## Next implementation plan (traversal), from sessions 4-5 measurements
+
+Not implemented yet. New `MoveMode`s `Mantle` and `Climb` in a `traverse.rs`
+module; constants go in `sheets/constants.tsv` first (rows already there,
+`used=no`).
+
+- **Mantle**: moving into a wall with W held, ledge top within reach
+  (ground ≤ ~60 u, air ≤ ~80 u above feet), standing room on top. Scripted
+  move to (top, +~20 u forward) over `0.22 + 0.006·height` s. Exit on top:
+  velocity = forward × current max speed if W held, else 0.
+- **Jump during a mantle**: progress < ~0.93 → jump off (fresh jump vz,
+  |h| ≈ 0). Progress ≥ ~0.93 and crouch on the same or next tick → **classic
+  superglide** = slide-jump at the exit (|h| = min(299 + 174.4, 460), fresh
+  jump vz, tap-strafeable). Progress ≥ ~0.93 without crouch → **mantle boost**
+  (|h| = 1.3 × 299 = 388.7, jump height 90). Real S21 mantle-boost gate also
+  uses a view-pitch sweet spot: not modelled.
+- **Wall climb**: airborne, pushing into a wall, once per airtime, attaches
+  when vz ≤ 89.6. vz accelerates 505 u/s² to 182.5, then decays 1.73/s
+  (2.88 %/tick at 60 fps). Lasts 0.833 s, ends with 255.5 up / 61.7 out. If a
+  ledge comes within reach during the climb → mantle.
+- **Wall jump / bounce** (jump while on the wall): 258 out along the wall
+  normal + 258 along the A/D input if held. vz: within 0.1 s of wall contact
+  lerp 260 → 373; later = current climb vz.
+- Golden tests: climb rise 142.8 / end push, mantle duration vs height,
+  superglide exit 460, mantle boost 388.7, wall bounce |h| 365.

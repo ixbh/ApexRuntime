@@ -246,7 +246,7 @@ fn eye_height(sim: &Sim, frac: f32) -> f32 {
 
 /// Interpolated feet position between the last two ticks.
 fn feet(sim: &Sim) -> apex_math::Vec3 {
-    sim.prev.position.lerp(sim.cur.position, sim.clock.alpha())
+    sim.prev.position.lerp(sim.cur.position, sim.alpha())
 }
 
 fn view_rotation(yaw: f32, pitch: f32, roll: f32) -> Quat {

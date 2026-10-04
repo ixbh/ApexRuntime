@@ -123,6 +123,26 @@ Same match, logs rotate at 10 MB (keep copies: `traces/raw/`).
   sliding); ground slide clamps to 400.0/350.0 on slopes (slopes not
   modelled).
 
+## Re-analysis 2026-10-04 (sessions 1-5 + apexmovement.tech wiki)
+
+- **Bhop penalty** found in the existing traces: jumping within 1.0 s of
+  landing cuts speed above 299 by up to 100 (never below 299). Matches the
+  wiki's Bunnyhop entry (`skip_time`). Implemented; T13 replay speed match
+  528 -> 695 of 1428 ticks.
+- **No jump buffer**: presses on the landing tick never jump (23/23).
+- **Real scroll input at 144 fps**: jump bit mostly single ticks with 1-2
+  tick gaps (858 single, 62 double runs): notches in back-to-back frames merge
+  into a held button, as Source usercmds do. The sandbox now samples input
+  the same way, one tick per rendered frame.
+- **Slide-jump within the boost** (crouch state 1): loses exactly the slide
+  boost (394.3 -> 221.8, 368.4 -> 195.9). The wiki's deadslide (jump before
+  0.24 s while above 350). 3 samples, not modelled yet.
+- **Wiki values to cross-check**: jump fatigue `antiMultiJumpTimeMin` 0.15,
+  `Max` 0.75, `HeightFrac` 0.3 (ours, measured: 0.14 / 0.735 / 0.30); air
+  accel 500 / air speed 60 (live); coyote time 0.2 s (not modelled); mantle
+  pull 0.3 s; climb space 147 u, attach offset 100 u, end boost +28 u;
+  wall jump zones (mini 0-19 u: 188 out, green/neutral: 258 out).
+
 ## Still to measure
 
 lurch (clean A/D taps at fixed times after takeoff; exact window and

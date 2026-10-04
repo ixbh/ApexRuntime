@@ -10,11 +10,15 @@
 //!           F5 start/stop recording · F6 movement trail · F7 jump fatigue
 //!           R respawn
 //!           Esc release mouse
-//! Options:  --hz N    simulation ticks per second (default 144; e.g. 165)
+//! Options:  --fps N   cap the frame rate (like Apex's fps_max; default: vsync)
+//!           --hz N    fixed simulation rate instead of one tick per frame
 //!           --fov N   Apex FOV slider value (default 110)
 //!
-//! Scroll notches become one-tick presses with a release tick between them,
-//! so every notch is a *new* press (what lurch / tap-strafing keys off).
+//! Like Apex, movement runs once per rendered frame (one usercmd per frame,
+//! dt = that frame's time), so frame-rate-dependent tech behaves as in game.
+//! Input is sampled the way Source builds a usercmd: a scroll notch (press +
+//! release inside one frame) holds the button for that frame's tick only;
+//! notches in back-to-back ticks read as a held button, exactly as in game.
 
 mod brush_mesh;
 mod view;
@@ -27,14 +31,13 @@ use apex_core::{
     Buttons, FixedClock, MovementConfig, MovementInput, MovementState, StepReport, step_with_report,
 };
 use apex_telemetry::{InputEvent, InputScript, ScriptStart, TraceRow, write_csv};
-use bevy::input::mouse::{AccumulatedMouseMotion, MouseScrollUnit, MouseWheel};
+use bevy::input::mouse::{AccumulatedMouseMotion, MouseWheel};
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
-/// Scroll notches are applied in the frame they happen (like the game, which
-/// sees them in that frame's usercmds). At most this many wait for a frame
-/// that runs no simulation tick; they are never carried into later frames.
-const MAX_QUEUED_NOTCHES: u32 = 2;
+/// Frame-locked dt limits: a hitch longer than this is simulated as this.
+const MIN_FRAME_DT: f64 = 1.0 / 1000.0;
+const MAX_FRAME_DT: f64 = 1.0 / 20.0;
 
 /// Source units (inches, Z-up) -> Bevy (metres, Y-up). A proper rotation, so
 /// mesh winding survives the conversion.
@@ -43,10 +46,6 @@ pub fn to_bevy(v: apex_math::Vec3) -> Vec3 {
     Vec3::new(v.x, v.z, -v.y) * UNITS_TO_METRES
 }
 
-/// Default simulation rate. Apex runs movement once per client frame, so
-/// frame-tight tech (superglide: crouch exactly one tick after jump) depends
-/// on it: run with `--hz 165` to practise at 165 fps timing.
-const DEFAULT_TICK_RATE: f64 = 144.0;
 /// Apex's FOV slider value (horizontal degrees at 4:3). 110 is common.
 const DEFAULT_APEX_FOV: f32 = 110.0;
 
@@ -68,23 +67,39 @@ fn apex_fov_to_vertical(apex_fov_deg: f32) -> f32 {
     2.0 * (half_h43.tan() * 0.75).atan()
 }
 
-fn tick_rate_from_args() -> f64 {
-    arg_value("--hz")
-        .filter(|v| (10.0..=1000.0).contains(v))
-        .unwrap_or(DEFAULT_TICK_RATE)
+/// `--hz N`: fixed-rate simulation (decoupled from rendering). None = one
+/// tick per frame, like Apex.
+fn fixed_hz_from_args() -> Option<f64> {
+    arg_value("--hz").filter(|v| (10.0..=1000.0).contains(v))
+}
+
+fn fps_cap_from_args() -> Option<f64> {
+    arg_value("--fps").filter(|v| (20.0..=1000.0).contains(v))
 }
 const MOUSE_DEG_PER_COUNT: f32 = 0.022 * 2.0; // Source m_yaw 0.022 × sensitivity 2
 
 fn main() {
+    let fps_cap = fps_cap_from_args();
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "ApexRuntime sandbox".into(),
                 resolution: (1600, 900).into(),
+                // A cap replaces vsync, like fps_max in game.
+                present_mode: if fps_cap.is_some() {
+                    bevy::window::PresentMode::AutoNoVsync
+                } else {
+                    bevy::window::PresentMode::AutoVsync
+                },
                 ..default()
             }),
             ..default()
         }))
+        .insert_resource(FrameLimiter {
+            frame: fps_cap.map(|f| std::time::Duration::from_secs_f64(1.0 / f)),
+            next: None,
+        })
+        .add_systems(Last, limit_frame_rate)
         .insert_resource(ClearColor(Color::srgb(0.53, 0.66, 0.80)))
         .insert_resource(Sim::new())
         .insert_resource(view::ViewState::default())
@@ -126,13 +141,13 @@ pub(crate) struct Sim {
     pub(crate) jump_latch: bool,
     /// Same for crouch: a superglide's crouch tap can be shorter than a tick.
     pub(crate) crouch_latch: bool,
+    /// Ticks per second: fixed with `--hz`, else the (smoothed) frame rate.
     pub(crate) tick_rate: f64,
-    /// Scroll-wheel notches waiting to be turned into one-tick presses.
-    pub(crate) scroll_fwd_pending: u32,
-    pub(crate) scroll_jump_pending: u32,
-    /// The previous tick was a scroll pulse, so this one must be a release.
-    pub(crate) fwd_pulse_last: bool,
-    pub(crate) jump_pulse_last: bool,
+    /// One movement tick per rendered frame (Apex), unless `--hz` was given.
+    pub(crate) frame_locked: bool,
+    /// A scroll notch arrived since the last tick (forward / jump).
+    pub(crate) scroll_fwd: bool,
+    pub(crate) scroll_jump: bool,
     pub(crate) auto_sprint: bool,
     /// Last lurch (strength, tick) so the HUD can show it for longer than a tick.
     pub(crate) last_lurch: (f32, u64),
@@ -150,11 +165,13 @@ struct Recording {
     start_pitch: f32,
     rows: Vec<TraceRow>,
     inputs: Vec<MovementInput>,
+    dts: Vec<f32>,
 }
 
 impl Sim {
     fn new() -> Self {
-        let tick_rate = tick_rate_from_args();
+        let fixed = fixed_hz_from_args();
+        let tick_rate = fixed.unwrap_or(144.0);
         let world = proving_ground();
         let s = MovementState::at(SPAWN);
         Self {
@@ -170,10 +187,9 @@ impl Sim {
             jump_latch: false,
             crouch_latch: false,
             tick_rate,
-            scroll_fwd_pending: 0,
-            scroll_jump_pending: 0,
-            fwd_pulse_last: false,
-            jump_pulse_last: false,
+            frame_locked: fixed.is_none(),
+            scroll_fwd: false,
+            scroll_jump: false,
             auto_sprint: true,
             last_lurch: (0.0, 0),
             last_event: ("-", 0),
@@ -182,6 +198,44 @@ impl Sim {
             hud_visible: true,
         }
     }
+
+    /// Render interpolation between the last two ticks (1 when frame-locked:
+    /// the newest tick *is* this frame).
+    pub(crate) fn alpha(&self) -> f32 {
+        if self.frame_locked {
+            1.0
+        } else {
+            self.clock.alpha()
+        }
+    }
+}
+
+/// Optional frame cap (`--fps`): sleeps, then spins the last bit for accuracy.
+#[derive(Resource)]
+struct FrameLimiter {
+    frame: Option<std::time::Duration>,
+    next: Option<std::time::Instant>,
+}
+
+fn limit_frame_rate(mut lim: ResMut<FrameLimiter>) {
+    let Some(frame) = lim.frame else { return };
+    let now = std::time::Instant::now();
+    let target = match lim.next {
+        Some(t) if t > now => t,
+        // Fell behind (or first frame): don't try to catch up.
+        _ => {
+            lim.next = Some(now + frame);
+            return;
+        }
+    };
+    let spin = std::time::Duration::from_micros(1500);
+    if target - now > spin {
+        std::thread::sleep(target - now - spin);
+    }
+    while std::time::Instant::now() < target {
+        std::hint::spin_loop();
+    }
+    lim.next = Some(target + frame);
 }
 
 #[derive(Component)]
@@ -351,32 +405,33 @@ fn simulate(
         sim.crouch_latch = true;
     }
     for ev in wheel.read() {
-        // Line units are notches; pixel units (touchpads) count as one notch.
-        let notches = match ev.unit {
-            MouseScrollUnit::Line => ev.y.abs().round().max(1.0) as u32,
-            MouseScrollUnit::Pixel => 1,
-        };
         if ev.y > 0.0 {
-            sim.scroll_fwd_pending = (sim.scroll_fwd_pending + notches).min(MAX_QUEUED_NOTCHES);
+            sim.scroll_fwd = true;
         } else if ev.y < 0.0 {
-            sim.scroll_jump_pending = (sim.scroll_jump_pending + notches).min(MAX_QUEUED_NOTCHES);
+            sim.scroll_jump = true;
         }
     }
-    let ticks = sim.clock.advance(time.delta_secs_f64());
+    let frame = time.delta_secs_f64();
+    let (ticks, dt) = if sim.frame_locked {
+        if frame <= 0.0 {
+            return;
+        }
+        let dt = frame.clamp(MIN_FRAME_DT, MAX_FRAME_DT);
+        sim.tick_rate = sim.tick_rate * 0.95 + 0.05 / dt;
+        (1, dt as f32)
+    } else {
+        let ticks = sim.clock.advance(frame);
+        (ticks, sim.clock.dt())
+    };
     for _ in 0..ticks {
-        let fwd_pulse = sim.scroll_fwd_pending > 0 && !sim.fwd_pulse_last;
-        if fwd_pulse {
-            sim.scroll_fwd_pending -= 1;
-        }
-        sim.fwd_pulse_last = fwd_pulse;
-        let jump_pulse = sim.scroll_jump_pending > 0 && !sim.jump_pulse_last;
-        if jump_pulse {
-            sim.scroll_jump_pending -= 1;
-        }
-        sim.jump_pulse_last = jump_pulse;
+        // Notches belong to the next tick only (Source: a press + release in
+        // one frame sets the button for that usercmd). Two notches in one
+        // frame are one press; notches in back-to-back ticks read as held.
+        let (fwd_pulse, jump_pulse) = (sim.scroll_fwd, sim.scroll_jump);
+        sim.scroll_fwd = false;
+        sim.scroll_jump = false;
 
         let input = sample_input(&keys, &sim, fwd_pulse, jump_pulse);
-        let dt = sim.clock.dt();
         let (next, rep) = step_with_report(&sim.cur, &input, &sim.cfg, &sim.world, dt);
         sim.prev = sim.cur;
         sim.cur = next;
@@ -415,14 +470,8 @@ fn simulate(
         if let Some(rec) = sim.recording.as_mut() {
             rec.rows.push(TraceRow::new(&next, &input, &rep));
             rec.inputs.push(input);
+            rec.dts.push(dt);
         }
-    }
-    if ticks > 0 {
-        // Notches belong to the frame they happened in: drop what this
-        // frame's ticks could not use instead of firing them late (stale
-        // presses used to land in the air and miss the landing tick).
-        sim.scroll_fwd_pending = 0;
-        sim.scroll_jump_pending = 0;
     }
 }
 
@@ -457,7 +506,7 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
          last lurch k {:.2} ({} ticks ago)   slide boost {}\n\
          always-sprint {} (F2)   scroll: up = W tap, down = jump\n\
          F3 1st/3rd person   F4 camera feel   F6 trail   F7 jump fatigue {}\n\
-         last event: {} ({} ticks ago)   sim {} Hz (--hz)\n\
+         last event: {} ({} ticks ago)   {}\n\
          {}\n\
          [Apex S21 rules where measured; see sheets/constants.tsv]",
         s.tick,
@@ -501,7 +550,14 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
         },
         sim.last_event.0,
         s.tick.saturating_sub(sim.last_event.1),
-        sim.tick_rate,
+        if sim.frame_locked {
+            format!(
+                "1 tick per frame, {:.0} fps (--fps N to cap)",
+                sim.tick_rate
+            )
+        } else {
+            format!("fixed {} Hz (--hz)", sim.tick_rate)
+        },
         rec,
     );
 }
@@ -538,6 +594,7 @@ fn hotkeys(keys: Res<ButtonInput<KeyCode>>, mut sim: ResMut<Sim>) {
                     start_pitch,
                     rows: Vec::new(),
                     inputs: Vec::new(),
+                    dts: Vec::new(),
                 });
             }
             Some(rec) => match save_recording(&rec, sim.tick_rate) {
@@ -565,13 +622,15 @@ fn save_recording(rec: &Recording, rec_tick_rate: f64) -> std::io::Result<PathBu
     )?;
 
     let mut events = Vec::new();
-    let mut prev: Option<MovementInput> = None;
-    for (tick, input) in rec.inputs.iter().enumerate() {
-        if prev.as_ref() == Some(input) {
+    let mut prev: Option<(MovementInput, f32)> = None;
+    for (tick, (input, &dt)) in rec.inputs.iter().zip(&rec.dts).enumerate() {
+        if prev == Some((*input, dt)) {
             continue;
         }
         let mut e = InputEvent {
             tick: tick as u64,
+            // Frame-locked recordings carry each frame's dt.
+            dt: Some(dt),
             ..InputEvent::default()
         };
         e.forward = Some(input.forward);
@@ -590,7 +649,7 @@ fn save_recording(rec: &Recording, rec_tick_rate: f64) -> std::io::Result<PathBu
             }
         }
         events.push(e);
-        prev = Some(*input);
+        prev = Some((*input, dt));
     }
     let script = InputScript {
         name: format!("sandbox-{stamp}"),

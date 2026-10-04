@@ -94,6 +94,19 @@ V = √(2·750·56) = 289.8. On the jump tick v_z is set to V − ½g·dt before
 split-gravity air move, so the position advances (V − g·dt)·dt and the tick
 ends at V − 1.5·g·dt. Rise: 53.5 @60 fps, 55.0 @144 fps.
 
+No jump buffer: the press must arrive on a tick that *starts* on the ground
+(the first tick after the landing tick). A press on the landing tick itself
+is lost (0 of 23 such presses jumped in S21 traces). Jumping happens before
+friction, so a first-ground-tick jump loses nothing to friction.
+
+### Bunnyhop penalty (S21 traces; wiki "skip_time")
+A jump taken within `bhop_skip_time` = 1.0 s of landing cuts horizontal
+speed above `sprint_speed` (299) by up to `bhop_speed_penalty` = 100, never
+below 299: 443.3 → 343.3, 460 → 360, 337 → 299, 297 kept; jumps at 1.13 s+
+keep their speed. The slide long-jump raise to 350 only applies outside the
+window (300.9 → 299 at 0.8 s). This also explains the old "−100 on landing"
+and "354 → 299" puzzles.
+
 ### Jump fatigue (session 4, 361 jumps, rms 2.9 u/s)
 After *landing from a jump* (falls, walk-offs and mantles do not count), the
 next jump's height is `0.30 × jump_height` if taken within 0.14 s on the
@@ -177,7 +190,11 @@ climb the replay doesn't cover), end height within 1 u on 36, duration error
 +0.003..+0.008 s mean (game spread 0.023 s), start within a tick.
 
 ### Jumping during a mantle
-* more than 0.15 s before the end → jump off (full jump, no horizontal speed);
+* in the **grab** (before the last `mantle_pull_time` = 0.3 s, ledges taller
+  than 42 u only) → jump off (full jump, no horizontal speed; S21 traces);
+* in the **pull** (last 0.3 s, or any time on a ≤ 42 u ledge) but before the
+  window → nothing happens (wiki: "if you jump too early you simply won't
+  jump"), so scroll-spamming into a ledge still mantles;
 * in the last 0.15 s, **crouch exactly one tick later** → **classic
   superglide**: a slide-jump from the ledge top, `min(base + 174.4, 460)`
   horizontal + full jump (base = sprint/run by input). Tick-based, so the

@@ -145,17 +145,28 @@ pub fn step_with_report(
             1.0
         };
         let mut launch = cfg.jump_speed(cfg.jump_height * frac);
+        let speed = s.velocity.horizontal().length();
+        // Bunnyhop penalty (S21 traces + wiki "skip_time"): jumping within
+        // 1 s of landing cuts speed above sprint by up to 100, never below
+        // sprint (443.3 -> 343.3, 337 -> 299, 297 kept; 1.13 s+ untouched).
+        let bhop = s.time_on_ground < cfg.bhop_skip_time;
+        let mut target = speed;
+        if bhop && speed > cfg.sprint_speed {
+            target = (speed - cfg.bhop_speed_penalty).max(cfg.sprint_speed);
+        }
         if s.sliding {
             launch *= cfg.slide_jump_mult;
             // Slide long jump: an unfatigued slide-jump is at least 350 u/s
             // horizontally (S21 traces: 316..335 -> 350.0; faster is kept).
-            let h = s.velocity.horizontal();
-            let speed = h.length();
-            if frac >= 1.0 && speed > 1e-3 && speed < cfg.slide_jump_min_speed {
-                let k = cfg.slide_jump_min_speed / speed;
-                s.velocity.x *= k;
-                s.velocity.y *= k;
+            // Not on a bhop: 300.9 -> 299 at 0.8 s after landing.
+            if !bhop && frac >= 1.0 && speed > 1e-3 && speed < cfg.slide_jump_min_speed {
+                target = cfg.slide_jump_min_speed;
             }
+        }
+        if speed > 1e-3 && target != speed {
+            let k = target / speed;
+            s.velocity.x *= k;
+            s.velocity.y *= k;
         }
         s.velocity.z = launch - 0.5 * cfg.gravity * dt;
         s.air_from_jump = true;

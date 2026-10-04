@@ -78,6 +78,10 @@ pub struct MovementConfig {
     pub slide_jump_mult: f32,
     /// An unfatigued jump out of a slide raises horizontal speed to at least this.
     pub slide_jump_min_speed: f32,
+    /// Bunnyhop penalty: a jump within `bhop_skip_time` of landing cuts
+    /// horizontal speed above `sprint_speed` by up to `bhop_speed_penalty`.
+    pub bhop_skip_time: f32,
+    pub bhop_speed_penalty: f32,
 
     /// Mantle: duration = base + per_unit × ledge height above the feet.
     pub mantle_duration_base: f32,
@@ -91,6 +95,11 @@ pub struct MovementConfig {
     /// mantle, crouch within `superglide_crouch_ticks` ticks after it.
     pub superglide_window: f32,
     pub superglide_crouch_ticks: f32,
+    /// Last part of a mantle (the pull): a jump here but before the
+    /// superglide window does nothing; earlier (the grab) it hops off.
+    pub mantle_pull_time: f32,
+    /// Ledges up to this height are pull-only (no grab to hop out of).
+    pub mantle_grab_min_height: f32,
     /// S21 mantle boost (late jump without crouch): exit speed multiplier and jump height.
     pub mantle_boost_mult: f32,
     pub mantle_boost_jump_height: f32,
@@ -180,6 +189,8 @@ impl MovementConfig {
         jump_fatigue_end: sheet::JUMP_FATIGUE_END,
         slide_jump_mult: sheet::SLIDE_JUMP_MULT,
         slide_jump_min_speed: sheet::SLIDE_JUMP_MIN_SPEED,
+        bhop_skip_time: sheet::BHOP_SKIP_TIME,
+        bhop_speed_penalty: sheet::BHOP_SPEED_PENALTY,
         mantle_duration_base: sheet::MANTLE_DURATION_BASE,
         mantle_duration_per_unit: sheet::MANTLE_DURATION_PER_UNIT,
         mantle_forward: sheet::MANTLE_FORWARD,
@@ -187,6 +198,8 @@ impl MovementConfig {
         mantle_ground_max_height: sheet::MANTLE_GROUND_MAX_HEIGHT,
         superglide_window: sheet::SUPERGLIDE_WINDOW,
         superglide_crouch_ticks: sheet::SUPERGLIDE_CROUCH_TICKS,
+        mantle_pull_time: sheet::MANTLE_PULL_TIME,
+        mantle_grab_min_height: sheet::MANTLE_GRAB_MIN_HEIGHT,
         mantle_boost_mult: sheet::MANTLE_BOOST_MULT,
         mantle_boost_jump_height: sheet::MANTLE_BOOST_JUMP_HEIGHT,
         mantle_boost_enabled: sheet::MANTLE_BOOST_ENABLED,

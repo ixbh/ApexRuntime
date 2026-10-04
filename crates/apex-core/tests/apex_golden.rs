@@ -347,3 +347,35 @@ fn walking_off_a_ledge_does_not_fatigue() {
     let v = s.velocity.z + 1.5 * cfg.gravity * DT60;
     assert!((v - 289.8).abs() < 0.5, "{v}");
 }
+
+/// One jump from the ground at `speed`, `ground_time` after landing.
+fn bhop_launch_speed(speed: f32, ground_time: f32, sliding: bool) -> f32 {
+    let w = flat();
+    let cfg = MovementConfig::default();
+    let mut s = grounded(&w, &cfg, Vec3::new(speed, 0.0, 0.0));
+    s.time_on_ground = ground_time;
+    s.sliding = sliding;
+    s.crouched = sliding;
+    let b = if sliding {
+        Buttons::JUMP | Buttons::CROUCH
+    } else {
+        Buttons::JUMP
+    };
+    let (n, r) = step_with_report(&s, &input(0.0, 0.0, b), &cfg, &w, DT144);
+    assert!(r.jumped);
+    n.velocity.horizontal().length()
+}
+
+#[test]
+fn bhop_penalty_matches_trace() {
+    // S21 traces (144 fps): within 1 s of landing, speed above sprint (299)
+    // is cut by up to 100: 443.3 -> 343.3, 337.0 -> 299.0; below is kept.
+    assert!((bhop_launch_speed(443.26, 0.0, true) - 343.26).abs() < 0.05);
+    assert!((bhop_launch_speed(337.0, 0.0, true) - 299.0).abs() < 0.05);
+    assert!((bhop_launch_speed(297.0, 0.011, true) - 297.0).abs() < 0.05);
+    assert!((bhop_launch_speed(447.3, 0.883, false) - 347.3).abs() < 0.05);
+    // After skip_time: no penalty (357.9 kept at 42 s; 381 kept).
+    assert!((bhop_launch_speed(381.0, 8.4, true) - 381.0).abs() < 0.05);
+    // ...and the unfatigued slide long jump still raises to 350.
+    assert!((bhop_launch_speed(326.0, 29.4, true) - 350.0).abs() < 0.05);
+}

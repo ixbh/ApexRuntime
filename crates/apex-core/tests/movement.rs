@@ -173,6 +173,8 @@ fn bunny_hop_skips_friction_on_jump_tick() {
     let cfg = MovementConfig::default();
     let mut s = settled(&w, &cfg, Vec3::ZERO);
     s.velocity = Vec3::new(400.0, 0.0, 0.0);
+    // Long on the ground: outside the bhop penalty window.
+    s.time_on_ground = 2.0;
     let (after, rep) = step_with_report(
         &s,
         &MovementInput::default().with_buttons(Buttons::JUMP),

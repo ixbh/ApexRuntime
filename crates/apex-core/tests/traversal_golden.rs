@@ -264,11 +264,45 @@ fn mantle_boost_matches_trace() {
 
 #[test]
 fn early_jump_during_mantle_jumps_off() {
-    // Too early: a plain jump off the wall, no horizontal speed (vz 287.6 @165).
-    let (v, r) = late_jump(40, false);
+    // In the grab (before the last 0.3 s pull): a plain jump off the wall,
+    // no horizontal speed (S21: vz 287.6 @165). 48 u mantle = 0.478 s.
+    let (v, r) = late_jump((0.4 / DT165) as usize, false);
     assert!(r.jumped && !r.superglide && !r.mantle_boost);
     assert!(v.horizontal().length() < 0.01);
     assert!((v.z - 287.5).abs() < 1.0);
+}
+
+#[test]
+fn jump_in_the_pull_before_the_window_does_nothing() {
+    // Wiki: "if you jump too early you simply won't jump"; the mantle goes on
+    // and finishes normally, so scroll-spamming into a ledge still mantles.
+    let (_, r) = late_jump((0.25 / DT165) as usize, false);
+    assert!(!r.jumped && !r.superglide && !r.mantle_boost, "{r:?}");
+    // A 40 u ledge is pull-only (wiki: up to at least 42 u from the ground):
+    // scroll-like spam (jump every other tick) from the mantle start never
+    // knocks you off; it ends in a normal finish or a late-window boost.
+    let w = world_with_block(40.0, 40.0);
+    let cfg = MovementConfig::default();
+    let mut s = grounded_at(&w, &cfg, 0.0, 0.0);
+    let mut mantling = false;
+    let mut finished = false;
+    for i in 0..400 {
+        let spam = mantling && i % 2 == 0;
+        let b = if spam {
+            SPRINT_W | Buttons::JUMP
+        } else {
+            SPRINT_W
+        };
+        let (n, r) = step_with_report(&s, &input(1.0, 0.0, b), &cfg, &w, DT165);
+        s = n;
+        mantling |= r.mantle_started;
+        if mantling && (r.mantle_finished || r.mantle_boost || r.superglide) {
+            finished = true;
+            break;
+        }
+        assert!(!(mantling && r.jumped), "knocked off at tick {i}");
+    }
+    assert!(finished);
 }
 
 #[test]
@@ -297,13 +331,14 @@ fn superglide_needs_crouch_exactly_one_tick_after_jump() {
 
 #[test]
 fn superglide_window_is_last_0_15_s() {
-    // 0.12 s before the end (inside): superglide. 0.2 s before (outside): jump-off.
+    // 0.12 s before the end (inside): superglide. 0.2 s before (outside, in
+    // the pull): nothing happens.
     let inside = (0.12 / DT165) as usize;
     let (_, r) = late_jump(inside, true);
     assert!(r.superglide, "{r:?}");
     let outside = (0.2 / DT165) as usize;
-    let (v, r) = late_jump(outside, true);
-    assert!(!r.superglide && r.jumped && v.horizontal().length() < 0.01);
+    let (_, r) = late_jump(outside, true);
+    assert!(!r.superglide && !r.jumped, "{r:?}");
 }
 
 #[test]

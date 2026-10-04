@@ -307,9 +307,15 @@ pub fn mantle_tick(
                 return;
             }
             m.late_jump_ticks = Some(0);
+        } else if remaining <= cfg.mantle_pull_time
+            || m.end.z - m.start.z <= cfg.mantle_grab_min_height
+        {
+            // In the pull but before the window: the press does nothing
+            // (wiki: "if you jump too early you simply won't jump"), so
+            // scroll-spamming into a ledge still mantles.
         } else {
-            // Too early: jump straight off where we are (S21: vz of a full
-            // jump, no horizontal speed).
+            // Grab phase: jump straight off where we are (S21: vz of a full
+            // jump, no horizontal speed; a mantle hop).
             let vz = cfg.jump_speed(cfg.jump_height) - 0.5 * cfg.gravity * dt;
             // The arc can overlap the ledge edge; step back out to the wall
             // plane the mantle started from if needed.

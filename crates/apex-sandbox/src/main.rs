@@ -7,7 +7,8 @@
 //! Controls: mouse look · WASD · Space jump · Ctrl/C/L crouch · Shift sprint
 //!           scroll up = tap W · scroll down = tap jump (Apex-style binds)
 //!           F1 HUD · F2 always-sprint · F3 first/third person · F4 camera feel
-//!           F5 start/stop recording · F6 movement trail · R respawn
+//!           F5 start/stop recording · F6 movement trail · F7 jump fatigue
+//!           R respawn
 //!           Esc release mouse
 //! Options:  --hz N    simulation ticks per second (default 144; e.g. 165)
 //!           --fov N   Apex FOV slider value (default 110)
@@ -455,7 +456,7 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
          air {:.3}s ground {:.3}s {}\n\
          last lurch k {:.2} ({} ticks ago)   slide boost {}\n\
          always-sprint {} (F2)   scroll: up = W tap, down = jump\n\
-         F3 1st/3rd person   F4 camera feel   F6 trail\n\
+         F3 1st/3rd person   F4 camera feel   F6 trail   F7 jump fatigue {}\n\
          last event: {} ({} ticks ago)   sim {} Hz (--hz)\n\
          {}\n\
          [Apex S21 rules where measured; see sheets/constants.tsv]",
@@ -493,6 +494,11 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
             )
         },
         if sim.auto_sprint { "ON" } else { "OFF" },
+        if sim.cfg.jump_fatigue_min_frac < 1.0 {
+            "ON"
+        } else {
+            "OFF"
+        },
         sim.last_event.0,
         s.tick.saturating_sub(sim.last_event.1),
         sim.tick_rate,
@@ -506,6 +512,16 @@ fn hotkeys(keys: Res<ButtonInput<KeyCode>>, mut sim: ResMut<Sim>) {
     }
     if keys.just_pressed(KeyCode::F2) {
         sim.auto_sprint = !sim.auto_sprint;
+    }
+    if keys.just_pressed(KeyCode::F7) {
+        // Compare with / without jump fatigue (measured on S21 Flowstate;
+        // live Apex may differ).
+        let measured = MovementConfig::default().jump_fatigue_min_frac;
+        sim.cfg.jump_fatigue_min_frac = if sim.cfg.jump_fatigue_min_frac < 1.0 {
+            1.0
+        } else {
+            measured
+        };
     }
     if keys.just_pressed(KeyCode::KeyR) {
         let s = MovementState::at(SPAWN);

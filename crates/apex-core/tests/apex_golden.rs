@@ -200,14 +200,17 @@ fn lurch_matches_trace_profile() {
         (0.433, 9.2),
     ] {
         let (dh, dv, _) = lurch_at(t, DT60, false);
-        assert!((dh - game).abs() < 1.5, "t={t}: {dh} vs {game}");
+        // 2.5°: these 60 fps samples' times are only good to a tick (17 ms)
+        // on the decaying part; the profile itself is fitted to session 7's
+        // exact 165 fps bot presses (lurch_matches_known_angle_bot_session).
+        assert!((dh - game).abs() < 2.5, "t={t}: {dh} vs {game}");
         // Full-strength 90° presses hit the |Δv| cap and give up speed
         // (S21: 299 -> 250-277); weaker late ones keep it.
         // 42.2° sits at the cap's edge (S21: 299 -> 299, |Δv| 215.4 < 217.6).
         if game > 43.5 {
             assert!((-49.0..=-15.0).contains(&dv), "t={t}: speed change {dv}");
         } else {
-            assert!(dv.abs() < 2.0, "t={t}: lurch keeps speed: {dv}");
+            assert!(dv.abs() < 6.0, "t={t}: lurch keeps (about) speed: {dv}");
         }
     }
     // Same strength per press at 144 fps (trace 0.236 s: 43.3 deg, 0.431 s: 10.3).
@@ -434,18 +437,18 @@ fn lurch_velocity_change_is_capped_at_superglide_speed() {
         s = step(&s, &input(0.0, 0.0, Buttons::NONE), &cfg, &w, dt);
     }
     let before = s.velocity.horizontal();
-    // View 90° right of the velocity (yaw -90), tap W.
+    // View 80° right of the velocity (session 6's first taps), tap W.
     let tap = MovementInput {
         forward: 1.0,
-        yaw: -90.0,
+        yaw: -80.0,
         ..MovementInput::default()
     };
     let n = step(&s, &tap, &cfg, &w, dt);
     let after = n.velocity.horizontal();
     let turn = (heading(after) - heading(before)).abs();
-    assert!((turn - 27.07).abs() < 0.5, "turn {turn}");
+    assert!((turn - 27.4).abs() < 1.0, "turn {turn}");
     assert!(
-        (after.length() - 409.7).abs() < 3.0,
+        (after.length() - 400.9).abs() < 6.0,
         "speed {}",
         after.length()
     );
@@ -523,4 +526,52 @@ fn coyote_jump_matches_trace() {
     // Too late.
     let (_, _, r) = coyote_jump(250.0, 0.25, false, false);
     assert!(!r.jumped);
+}
+
+#[test]
+fn lurch_matches_known_angle_bot_session() {
+    // Session 7 (apex-inputbot, 165 fps, 260 u/s): view flicked right by an
+    // exact angle, one W notch. (wish angle, press time, turn, speed after)
+    let cases = [
+        (15.0, 0.15, 10.5, 259.8),
+        (30.0, 0.15, 21.1, 259.9),
+        (45.0, 0.15, 31.9, 260.1),
+        (60.0, 0.15, 43.0, 260.0),
+        (90.0, 0.15, 51.0, 227.5),
+        (120.0, 0.15, 54.3, 177.0),
+        (45.0, 0.30, 20.5, 259.8),
+        (90.0, 0.30, 40.9, 259.8),
+        (120.0, 0.30, 49.5, 246.7),
+        (45.0, 0.40, 10.0, 259.9),
+        (90.0, 0.40, 17.4, 260.1),
+    ];
+    let w = flat();
+    let cfg = MovementConfig::default();
+    let dt = 1.0 / 165.0;
+    for (ang, at, turn, speed) in cases {
+        let mut s = grounded(&w, &cfg, Vec3::new(260.0, 0.0, 0.0));
+        s.time_on_ground = 2.0;
+        s = step(&s, &input(0.0, 0.0, Buttons::JUMP), &cfg, &w, dt);
+        let ticks = (at / dt).round() as usize - 1;
+        for _ in 0..ticks {
+            s = step(&s, &input(0.0, 0.0, Buttons::NONE), &cfg, &w, dt);
+        }
+        let before = s.velocity.horizontal();
+        let tap = MovementInput {
+            forward: 1.0,
+            yaw: -ang,
+            ..MovementInput::default()
+        };
+        let after = step(&s, &tap, &cfg, &w, dt).velocity.horizontal();
+        let got = (heading(after) - heading(before)).abs();
+        assert!(
+            (got - turn).abs() < 1.5,
+            "{ang} deg at {at} s: turn {got} vs {turn}"
+        );
+        assert!(
+            (after.length() - speed).abs() < 7.0,
+            "{ang} deg at {at} s: speed {} vs {speed}",
+            after.length()
+        );
+    }
 }

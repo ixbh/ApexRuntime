@@ -1,0 +1,74 @@
+[
+  {
+    "label": "lurch W notch at 150 ms, view 15 deg right",
+    "start_unix_ms": 1791133240722
+  },
+  {
+    "label": "lurch W notch at 150 ms, view 30 deg right",
+    "start_unix_ms": 1791133244922
+  },
+  {
+    "label": "lurch W notch at 150 ms, view 45 deg right",
+    "start_unix_ms": 1791133249123
+  },
+  {
+    "label": "lurch W notch at 150 ms, view 60 deg right",
+    "start_unix_ms": 1791133253324
+  },
+  {
+    "label": "lurch W notch at 150 ms, view 90 deg right",
+    "start_unix_ms": 1791133257524
+  },
+  {
+    "label": "lurch W notch at 150 ms, view 120 deg right",
+    "start_unix_ms": 1791133261725
+  },
+  {
+    "label": "lurch W notch at 300 ms, view 15 deg right",
+    "start_unix_ms": 1791133265925
+  },
+  {
+    "label": "lurch W notch at 300 ms, view 30 deg right",
+    "start_unix_ms": 1791133270126
+  },
+  {
+    "label": "lurch W notch at 300 ms, view 45 deg right",
+    "start_unix_ms": 1791133274327
+  },
+  {
+    "label": "lurch W notch at 300 ms, view 60 deg right",
+    "start_unix_ms": 1791133278527
+  },
+  {
+    "label": "lurch W notch at 300 ms, view 90 deg right",
+    "start_unix_ms": 1791133282728
+  },
+  {
+    "label": "lurch W notch at 300 ms, view 120 deg right",
+    "start_unix_ms": 1791133286929
+  },
+  {
+    "label": "lurch W notch at 400 ms, view 15 deg right",
+    "start_unix_ms": 1791133291129
+  },
+  {
+    "label": "lurch W notch at 400 ms, view 30 deg right",
+    "start_unix_ms": 1791133295330
+  },
+  {
+    "label": "lurch W notch at 400 ms, view 45 deg right",
+    "start_unix_ms": 1791133299530
+  },
+  {
+    "label": "lurch W notch at 400 ms, view 60 deg right",
+    "start_unix_ms": 1791133303731
+  },
+  {
+    "label": "lurch W notch at 400 ms, view 90 deg right",
+    "start_unix_ms": 1791133307932
+  },
+  {
+    "label": "lurch W notch at 400 ms, view 120 deg right",
+    "start_unix_ms": 1791133312132
+  }
+]

@@ -466,25 +466,15 @@ fn lurch(
     }
     // The change is capped (S21, every session: |Δv| tops out at 0.7 × 299 +
     // one tick of air accel: 217.6 @60 fps, 212.4 @144, 209.3/212.3 @165).
-    // Past the cap the direction is kept and speed is given up: the fastest
-    // speed along `dir` within the cap (299 -> 256.7 predicted / 256.1
-    // measured on a 45° press; 400.9 -> 391.8 / 391.7 after a superglide).
-    // If no speed along `dir` is close enough, it turns as far as the cap
-    // allows (asin(cap/|v|): 27.07° at 460, measured 27.0-27.4°).
+    // Past the cap the change is cut along the same line, losing speed:
+    // session 7 (known angles, 260 u/s): 90° at 0.15 s -> 51.1° / 227.8
+    // predicted, 51.0° / 227.5 measured; 120° -> 54.2° / 177.3 vs 54.3° / 177.0.
     let cap = cfg.lurch_max_delta_frac * cfg.sprint_speed + cfg.air_accel * cfg.run_speed * dt;
     let mut new_h = dir * speed;
-    if (new_h - h).length() > cap {
-        let along = h.dot(dir);
-        let disc = along * along - (speed * speed - cap * cap);
-        new_h = if disc >= 0.0 {
-            dir * (along + disc.sqrt())
-        } else {
-            let cur = h / speed;
-            let side = (dir - cur * cur.dot(dir)).normalize_or_zero();
-            let sin = (cap / speed).min(1.0);
-            let cos = (1.0 - sin * sin).sqrt();
-            (cur * cos + side * sin) * (speed * cos)
-        };
+    let delta = new_h - h;
+    let len = delta.length();
+    if len > cap {
+        new_h = h + delta * (cap / len);
     }
     s.velocity.x = new_h.x;
     s.velocity.y = new_h.y;

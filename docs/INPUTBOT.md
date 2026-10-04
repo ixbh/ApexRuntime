@@ -14,7 +14,7 @@ Plays scripted key presses, wheel notches and exact mouse turns into the
 ## Use
 1. Launch Flowstate (same launch args as session 6), load Firing Range, stand
    in a long flat lane facing along it. Auto-sprint on, sensitivity 1.63.
-2. `python research/bot/make_scripts.py --crouch l --sens 1.63`
+2. `python research/bot/make_scripts.py --crouch c --sens 1.63`
 3. `cargo run --release -p apex-inputbot -- research/bot/scripts/deadslide.json`
    then click into the game within 5 s and let go of the mouse/keyboard.
 4. Copy the logs as usual. The bot writes `traces/raw/bot-<name>-<time>.json`

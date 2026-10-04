@@ -1,6 +1,6 @@
 """Generate apex-inputbot scripts for automated R5Flowstate captures.
 
-usage: python research/bot/make_scripts.py [--crouch l] [--sens 1.63]
+usage: python research/bot/make_scripts.py [--crouch c] [--sens 1.63]
 Writes research/bot/scripts/*.json. Each attempt ends with a 180° turn so the
 next one runs back the other way (a long flat lane is enough; no teleport).
 Run with:  cargo run --release -p apex-inputbot -- research/bot/scripts/<name>.json
@@ -11,7 +11,7 @@ args = sys.argv[1:]
 def opt(name, default):
     return args[args.index(name) + 1] if name in args else default
 
-CROUCH = opt('--crouch', 'l')      # the player's crouch key
+CROUCH = opt('--crouch', 'c')      # a HOLD crouch key (C or ctrl); L is toggle
 SENS = float(opt('--sens', '1.63'))
 FPS = 165.0
 FRAME = 1000.0 / FPS

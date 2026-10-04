@@ -161,12 +161,16 @@ Checked against the S21 traces with geometry-matched replays
 
 ### Mantle
 Triggered at the **start of a tick** after the player touched a wall on the
-previous tick and is pushing into it (W toward it, moving into it, or last
-tick's impact > 50 u/s). Needs a ledge with standing room `mantle_forward`
+previous tick and is pushing into it: any input toward it (A/D or a scroll-W
+tap count, W is not required), moving into it, or last tick's impact
+(> 10 u/s). Sideways speed along the wall is **carried through the mantle
+while A/D is held that way** (otherwise it bleeds off at 1250 u/s²) and kept
+on the exit, so angled mantles flow instead of snapping straight. Needs a ledge with standing room `mantle_forward`
 (19 u) past the wall, `step_height < height ≤ 80` above the feet (≤ 60
-from the ground). Scripted move onto the ledge over
-`0.162 + 0.00659 × height` s (path between start and end is a smooth
-stand-in: the game does not log inside a mantle). Exit: forward × current max
+from the ground). Scripted up-and-over arc onto the
+ledge over `0.162 + 0.00659 × height` s (the game does not log inside a
+mantle; the arc may overlap the ledge edge like Apex's animation-driven
+traversal, and a jump-off mid-mantle steps back out to the wall plane). Exit: forward × current max
 speed if W is held, else standing still. Mantles don't cause jump fatigue.
 Replays: 37/39 recorded mantles reproduced (the other 2 start from a wall
 climb the replay doesn't cover), end height within 1 u on 36, duration error
@@ -183,7 +187,9 @@ climb the replay doesn't cover), end height within 1 u on 36, duration error
   also needs a view-pitch sweet spot, not modelled).
 
 ### Wall climb
-Airborne, pushing into a wall, once per airtime. Decided **mid-tick**: if
+Airborne, pushing into a wall, once per airtime. Contact does not need W
+(recorded bounces attached with only A held); **climbing up needs W**:
+without it the contact only lasts the 0.1 s bounce window. Decided **mid-tick**: if
 `vz − ½·g·dt ≤ 90` the climb attaches on that tick (second half of gravity
 skipped), then vz rises 505 u/s² to 182.5, then decays `exp(−1.753·t)`.
 After 51 climb ticks (0.85 s) the next tick pushes 255.5 up / 61.7 away.

@@ -113,6 +113,13 @@ pub struct MovementConfig {
     pub wall_bounce_vz_max: f32,
     /// Distance ahead in which a wall counts as touched.
     pub wall_probe_dist: f32,
+    /// Pushing into a wall: wish·(−normal) above this, or moving into it faster
+    /// than `wall_push_min_speed`.
+    pub wall_push_min_dot: f32,
+    pub wall_push_min_speed: f32,
+    /// Sideways (along-the-wall) speed carried through a mantle decays at this
+    /// rate unless A/D is held that way.
+    pub mantle_side_decay: f32,
 
     /// Source `sv_airaccelerate`. `[source]`
     pub air_accel: f32,
@@ -195,6 +202,9 @@ impl MovementConfig {
         wall_bounce_vz_min: sheet::WALL_BOUNCE_VZ_MIN,
         wall_bounce_vz_max: sheet::WALL_BOUNCE_VZ_MAX,
         wall_probe_dist: sheet::WALL_PROBE_DIST,
+        wall_push_min_dot: sheet::WALL_PUSH_MIN_DOT,
+        wall_push_min_speed: sheet::WALL_PUSH_MIN_SPEED,
+        mantle_side_decay: sheet::MANTLE_SIDE_DECAY,
         air_accel: sheet::AIR_ACCEL,
         air_speed_cap: sheet::AIR_SPEED_CAP,
         step_height: sheet::STEP_HEIGHT,

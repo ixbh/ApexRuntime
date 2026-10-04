@@ -30,8 +30,10 @@ use bevy::input::mouse::{AccumulatedMouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
-/// Most scroll notches queued at once (a fast flick should not keep pressing for seconds).
-const MAX_QUEUED_NOTCHES: u32 = 8;
+/// Scroll notches are applied in the frame they happen (like the game, which
+/// sees them in that frame's usercmds). At most this many wait for a frame
+/// that runs no simulation tick; they are never carried into later frames.
+const MAX_QUEUED_NOTCHES: u32 = 2;
 
 /// Source units (inches, Z-up) -> Bevy (metres, Y-up). A proper rotation, so
 /// mesh winding survives the conversion.
@@ -413,6 +415,13 @@ fn simulate(
             rec.rows.push(TraceRow::new(&next, &input, &rep));
             rec.inputs.push(input);
         }
+    }
+    if ticks > 0 {
+        // Notches belong to the frame they happened in: drop what this
+        // frame's ticks could not use instead of firing them late (stale
+        // presses used to land in the air and miss the landing tick).
+        sim.scroll_fwd_pending = 0;
+        sim.scroll_jump_pending = 0;
     }
 }
 

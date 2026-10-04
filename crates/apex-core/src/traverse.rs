@@ -88,6 +88,8 @@ fn start_mantle(
     dir: Vec3,
     cfg: &MovementConfig,
 ) {
+    let h = s.velocity.horizontal();
+    let side_vel = h - dir * h.dot(dir);
     s.mantle = Some(Mantle {
         start: s.position,
         end,
@@ -95,6 +97,8 @@ fn start_mantle(
         t: 0.0,
         duration: cfg.mantle_duration_base + cfg.mantle_duration_per_unit * height,
         late_jump_ticks: None,
+        side_vel,
+        side_offset: Vec3::ZERO,
     });
     s.climb = None;
     s.sliding = false;
@@ -113,7 +117,6 @@ fn start_mantle(
 pub fn try_start(
     s: &mut MovementState,
     rep: &mut StepReport,
-    input: &MovementInput,
     wish_dir: Vec3,
     pre_move_h: Vec3,
     allow_climb: bool,
@@ -124,22 +127,27 @@ pub fn try_start(
     if s.mantle.is_some() || s.climb.is_some() || rep.jumped {
         return;
     }
-    let moving = pre_move_h.normalize_or_zero();
-    let dir = if wish_dir != Vec3::ZERO {
-        wish_dir
-    } else if moving != Vec3::ZERO {
-        moving
-    } else {
-        -s.last_wall_normal
-    };
     let hull = cfg.hull(s.crouched);
-    let Some(n) = probe_wall(world, hull, s.position, dir, cfg.wall_probe_dist) else {
+    // Look for the wall along the input, the motion, and last tick's wall.
+    let candidates = [
+        wish_dir,
+        pre_move_h.normalize_or_zero(),
+        -s.last_wall_normal,
+    ];
+    let Some(n) = candidates
+        .iter()
+        .find_map(|&d| probe_wall(world, hull, s.position, d, cfg.wall_probe_dist))
+    else {
         return;
     };
-    // Pushing into it: by input, by current motion, or by last tick's impact
-    // (the move that hit the wall already removed the velocity into it).
-    let hit_last_tick = s.last_wall_normal.dot(n) > 0.9 && s.last_wall_impact > 50.0;
-    let into_wall = wish_dir.dot(-n) > 0.5 || pre_move_h.dot(-n) > 50.0 || hit_last_tick;
+    // Pushing into it: any input toward it (A/D or a scroll-W tap count, W is
+    // not required), current motion, or last tick's impact (the move that hit
+    // the wall already removed the velocity into it).
+    let hit_last_tick =
+        s.last_wall_normal.dot(n) > 0.9 && s.last_wall_impact > cfg.wall_push_min_speed;
+    let into_wall = wish_dir.dot(-n) > cfg.wall_push_min_dot
+        || pre_move_h.dot(-n) > cfg.wall_push_min_speed
+        || hit_last_tick;
     if !into_wall {
         return;
     }
@@ -159,7 +167,6 @@ pub fn try_start(
         && !s.on_ground()
         && !s.climbed_this_air
         && !s.crouched
-        && input.forward > 0.0
         && vz_mid > 0.0
         && vz_mid <= cfg.climb_attach_vz
     {
@@ -223,7 +230,13 @@ fn superglide_exit(
         base
     };
     let vz = cfg.jump_speed(cfg.jump_height) - 0.5 * cfg.gravity * dt;
-    leave_mantle_airborne(s, rep, m.end, m.dir * h + Vec3::new(0.0, 0.0, vz));
+    let dir = (m.dir * h + m.side_vel).normalize_or_zero();
+    leave_mantle_airborne(
+        s,
+        rep,
+        m.end + m.side_offset,
+        dir * h + Vec3::new(0.0, 0.0, vz),
+    );
     s.crouched = true;
     s.crouch_frac = 1.0;
     rep.superglide = true;
@@ -247,16 +260,25 @@ fn mantle_boost_exit(
         (base, cfg.jump_height)
     };
     let vz = cfg.jump_speed(height) - 0.5 * cfg.gravity * dt;
-    leave_mantle_airborne(s, rep, m.end, m.dir * h + Vec3::new(0.0, 0.0, vz));
+    let dir = (m.dir * h + m.side_vel).normalize_or_zero();
+    leave_mantle_airborne(
+        s,
+        rep,
+        m.end + m.side_offset,
+        dir * h + Vec3::new(0.0, 0.0, vz),
+    );
 }
 
 /// One tick of an in-progress mantle.
+#[allow(clippy::too_many_arguments)]
 pub fn mantle_tick(
     s: &mut MovementState,
     rep: &mut StepReport,
     input: &MovementInput,
     pressed: Buttons,
+    wish_dir: Vec3,
     cfg: &MovementConfig,
+    world: &impl CollisionWorld,
     dt: f32,
 ) {
     let Some(mut m) = s.mantle else { return };
@@ -289,8 +311,21 @@ pub fn mantle_tick(
             // Too early: jump straight off where we are (S21: vz of a full
             // jump, no horizontal speed).
             let vz = cfg.jump_speed(cfg.jump_height) - 0.5 * cfg.gravity * dt;
-            let here = s.position;
-            leave_mantle_airborne(s, rep, here, Vec3::new(0.0, 0.0, vz));
+            // The arc can overlap the ledge edge; step back out to the wall
+            // plane the mantle started from if needed.
+            let hull = cfg.hull(s.crouched);
+            let mut here = s.position;
+            if !world.hull_fits(here, hull) {
+                let back = Vec3::new(
+                    m.start.x + m.side_offset.x,
+                    m.start.y + m.side_offset.y,
+                    here.z,
+                );
+                if world.hull_fits(back, hull) {
+                    here = back;
+                }
+            }
+            leave_mantle_airborne(s, rep, here, m.side_vel + Vec3::new(0.0, 0.0, vz));
             return;
         }
     }
@@ -302,21 +337,42 @@ pub fn mantle_tick(
     } else {
         1.0
     };
-    // Rise to the ledge height first (ease-out), then move onto it. Never
-    // moving forward below the top keeps the hull out of the ledge at every
-    // tick, so an interrupted mantle (jump-off) always leaves a valid
-    // position. Only the endpoints and the duration are measured.
-    const RISE_PART: f32 = 0.7;
-    let r = (u / RISE_PART).min(1.0);
+    // Up-and-over arc: rise (ease-out) over the first 80 %, move onto the
+    // ledge (smoothstep) over the last 80 %. Only the endpoints and the
+    // duration are measured; the game does not log inside a mantle.
+    let r = (u / 0.8).min(1.0);
     let rise = 1.0 - (1.0 - r) * (1.0 - r);
-    let o = ((u - RISE_PART) / (1.0 - RISE_PART)).clamp(0.0, 1.0);
+    let o = ((u - 0.2) / 0.8).clamp(0.0, 1.0);
     let over = o * o * (3.0 - 2.0 * o);
+
+    // Sideways momentum along the wall: kept while A/D pushes that way,
+    // otherwise it bleeds off. Moved with collision so it stops at obstacles.
+    let side_input = wish_dir - m.dir * wish_dir.dot(m.dir);
+    let speed = m.side_vel.length();
+    if speed > 0.0 && side_input.dot(m.side_vel) <= 0.0 {
+        let k = (speed - cfg.mantle_side_decay * dt).max(0.0) / speed;
+        m.side_vel *= k;
+    }
     let span = m.end - m.start;
-    s.position = Vec3::new(
+    let base = Vec3::new(
         m.start.x + span.x * over,
         m.start.y + span.y * over,
         m.start.z + span.z * rise,
     );
+    if m.side_vel != Vec3::ZERO {
+        let hull = cfg.hull(s.crouched);
+        let from = base + m.side_offset;
+        let tr = world.trace_hull(from, from + m.side_vel * dt, hull);
+        if tr.start_solid {
+            m.side_offset += m.side_vel * dt;
+        } else {
+            m.side_offset = tr.end_pos - base;
+            if tr.fraction < 1.0 {
+                m.side_vel = Vec3::ZERO;
+            }
+        }
+    }
+    s.position = base + m.side_offset;
     s.velocity = if dt > 0.0 {
         (s.position - prev) / dt
     } else {
@@ -326,12 +382,30 @@ pub fn mantle_tick(
     if u >= 1.0 && m.late_jump_ticks.is_none() {
         // Finished: stand on the ledge, moving on at full speed if W is held.
         s.mantle = None;
-        s.position = m.end;
-        s.velocity = if input.forward > 0.0 {
-            m.dir * exit_speed(input, cfg)
+        let hull = cfg.hull(s.crouched);
+        let target = m.end + m.side_offset;
+        let above = target + Vec3::new(0.0, 0.0, cfg.step_height);
+        let below = target - Vec3::new(0.0, 0.0, cfg.step_height + 2.0);
+        let tr = world.trace_hull(above, below, hull);
+        s.position = if !tr.start_solid && tr.fraction < 1.0 {
+            tr.end_pos
+        } else if world.hull_fits(target, hull) {
+            target
+        } else {
+            m.end
+        };
+        let max = exit_speed(input, cfg);
+        let mut v = if input.forward > 0.0 {
+            m.dir * max
         } else {
             Vec3::ZERO
         };
+        v += m.side_vel;
+        let cap = max.max(m.side_vel.length());
+        if v.length() > cap {
+            v = v.normalize_or_zero() * cap;
+        }
+        s.velocity = v;
         // Mantles do not cause jump fatigue.
         s.air_from_jump = false;
         rep.mantle_finished = true;
@@ -387,6 +461,26 @@ pub fn climb_tick(
         s.air_from_jump = true;
         rep.jumped = true;
         rep.wall_jump = true;
+        return;
+    }
+
+    // Without W this is only wall *contact* (what wall bounces use): no
+    // climbing, and it lets go after the bounce window.
+    if input.forward <= 0.0 {
+        if c.t > cfg.wall_bounce_window {
+            s.climb = None;
+            return;
+        }
+        let vz = s.velocity.z - cfg.gravity * dt;
+        let tr = world.trace_hull(
+            s.position,
+            s.position + Vec3::new(0.0, 0.0, vz * dt),
+            cfg.hull(s.crouched),
+        );
+        s.position = tr.end_pos;
+        s.velocity = Vec3::new(0.0, 0.0, vz);
+        c.t += dt;
+        s.climb = Some(c);
         return;
     }
 

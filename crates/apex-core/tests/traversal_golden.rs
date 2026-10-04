@@ -308,7 +308,8 @@ fn superglide_window_is_last_0_15_s() {
 
 #[test]
 fn interrupted_mantle_never_leaves_the_hull_inside_the_ledge() {
-    // Jump off at every point of a mantle: the position must always be free.
+    // The mantle arc may overlap the ledge edge (as Apex's animation-driven
+    // traversal does), but a jump-off at any point must leave a free position.
     let w = world_with_block(40.0, 48.0);
     let cfg = MovementConfig::default();
     for jump_tick in 0..40 {
@@ -325,10 +326,12 @@ fn interrupted_mantle_never_leaves_the_hull_inside_the_ledge() {
             s = n;
             if started {
                 ticks += 1;
-                assert!(
-                    w.hull_fits(s.position, cfg.hull(s.crouched)),
-                    "inside the ledge at tick {ticks} (jump at {jump_tick})"
-                );
+                if s.mantle.is_none() {
+                    assert!(
+                        w.hull_fits(s.position, cfg.hull(s.crouched)),
+                        "inside the ledge after leaving the mantle (jump at {jump_tick})"
+                    );
+                }
             }
             if r.mantle_started {
                 started = true;
@@ -348,4 +351,85 @@ fn a_hull_started_inside_solid_is_pushed_out() {
     let (s, r) = step_with_report(&s, &MovementInput::default(), &cfg, &w, DT60);
     assert!(r.unstuck);
     assert!(w.hull_fits(s.position, cfg.hull(s.crouched)));
+}
+
+#[test]
+fn mantle_without_w_carries_sideways_momentum() {
+    // Moving diagonally into a ledge holding only D: the mantle still happens
+    // and the sideways speed along the wall is carried through it.
+    let w = world_with_block(40.0, 48.0);
+    let cfg = MovementConfig::default();
+    let mut s = grounded_at(&w, &cfg, 0.0, 0.0);
+    // Camera at yaw 45 (looking +X+Y at the wall on +X): D (right) points
+    // +X-Y, so it pushes into the wall and along it. Moving that way.
+    s.velocity = Vec3::new(150.0, -150.0, 0.0);
+    let d_only = MovementInput {
+        right: 1.0,
+        yaw: 45.0,
+        ..MovementInput::default()
+    };
+    let start_y = s.position.y;
+    let mut started = false;
+    for _ in 0..200 {
+        let (n, r) = step_with_report(&s, &d_only, &cfg, &w, DT60);
+        s = n;
+        started |= r.mantle_started;
+        if r.mantle_finished {
+            break;
+        }
+    }
+    assert!(started, "D toward the wall is enough to mantle");
+    assert!(
+        (s.position.z - 48.0).abs() < 0.5,
+        "on top: {}",
+        s.position.z
+    );
+    assert!(
+        start_y - s.position.y > 40.0,
+        "moved sideways during the mantle: {}",
+        start_y - s.position.y
+    );
+    assert!(
+        s.velocity.y < -100.0,
+        "sideways speed kept: {:?}",
+        s.velocity
+    );
+}
+
+#[test]
+fn wall_contact_without_w_allows_a_bounce() {
+    // Recorded bounces attached with only A held (no W).
+    let w = world_with_block(45.0, 2000.0);
+    let cfg = MovementConfig::default();
+    let mut s = grounded_at(&w, &cfg, 0.0, 299.0);
+    s = step(
+        &s,
+        &input(1.0, 0.0, SPRINT_W | Buttons::JUMP),
+        &cfg,
+        &w,
+        DT60,
+    );
+    // Camera at yaw 45: D pushes into the wall (+X) and along it.
+    let d_only = MovementInput {
+        right: 1.0,
+        yaw: 45.0,
+        ..MovementInput::default()
+    };
+    let mut contact = false;
+    for _ in 0..60 {
+        let (n, r) = step_with_report(&s, &d_only, &cfg, &w, DT60);
+        s = n;
+        if r.climb_started {
+            contact = true;
+            break;
+        }
+    }
+    assert!(contact, "wall contact with A/D only");
+    let jump = MovementInput {
+        buttons: Buttons::JUMP,
+        ..d_only
+    };
+    let (s, r) = step_with_report(&s, &jump, &cfg, &w, DT60);
+    assert!(r.wall_jump);
+    assert!((s.velocity.horizontal().length() - 364.9).abs() < 1.0);
 }

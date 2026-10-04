@@ -79,3 +79,6 @@ wall_bounce_window	f32	0.1	s	measured	medium	S21	yes	Flowstate S21 MOVE-TRACE se
 wall_bounce_vz_min	f32	260	u/s	measured	medium	S21	yes	Flowstate S21 MOVE-TRACE sessions 4-5 (2026-10-03)	bounce vz at ~0.005 s contact
 wall_bounce_vz_max	f32	373	u/s	measured	medium	S21	yes	Flowstate S21 MOVE-TRACE sessions 4-5 (2026-10-03)	bounce vz at ~0.1 s contact (371-374)
 wall_probe_dist	f32	2	u	placeholder	none	-	yes	guess	how far ahead a wall counts as touched
+wall_push_min_dot	f32	0.1	-	placeholder	low	-	yes	player feedback 2026-10-04	input counts as pushing into a wall when wish.dot(-normal) > this: A/D or a scroll-W tap toward the wall is enough (mantles do not need W)
+wall_push_min_speed	f32	10	u/s	placeholder	low	-	yes	player feedback 2026-10-04	or moving into the wall faster than this (this tick or the impact last tick)
+mantle_side_decay	f32	1250	u/s^2	placeholder	low	-	yes	player feedback 2026-10-04	sideways speed along the wall is carried through a mantle while A/D is held that way; otherwise it bleeds off at this rate (ground friction value)

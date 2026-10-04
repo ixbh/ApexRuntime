@@ -114,7 +114,9 @@ pub fn step_with_report(
 
     if traversing {
         if s.mantle.is_some() {
-            crate::traverse::mantle_tick(&mut s, &mut rep, input, pressed, cfg, dt);
+            crate::traverse::mantle_tick(
+                &mut s, &mut rep, input, pressed, wish_dir, cfg, world, dt,
+            );
         } else {
             crate::traverse::climb_tick(&mut s, &mut rep, input, pressed, wish_dir, cfg, world, dt);
         }
@@ -175,7 +177,6 @@ pub fn step_with_report(
         crate::traverse::try_start(
             &mut s,
             &mut rep,
-            input,
             wish_dir,
             pre_move_h,
             allow_climb,
@@ -189,7 +190,9 @@ pub fn step_with_report(
             return (s, rep);
         }
         if s.mantle.is_some() {
-            crate::traverse::mantle_tick(&mut s, &mut rep, input, pressed, cfg, dt);
+            crate::traverse::mantle_tick(
+                &mut s, &mut rep, input, pressed, wish_dir, cfg, world, dt,
+            );
             finish_tick(&mut s, &mut rep, input, was_on_ground, cfg, world, dt);
             return (s, rep);
         }

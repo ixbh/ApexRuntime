@@ -37,6 +37,10 @@ pub struct Mantle {
     /// Ticks since a jump was pressed inside the superglide window (None = no
     /// pending late jump). The following tick decides superglide vs mantle boost.
     pub late_jump_ticks: Option<u8>,
+    /// Sideways velocity along the wall carried through the mantle, and the
+    /// sideways distance covered so far.
+    pub side_vel: Vec3,
+    pub side_offset: Vec3,
 }
 
 /// An in-progress wall climb.

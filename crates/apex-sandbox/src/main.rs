@@ -532,6 +532,7 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
          F3 1st/3rd person   F4 camera feel   F6 trail   F7 jump fatigue {}\n\
          last event: {} ({} ticks ago)   {}\n\
          last hop: {}\n\
+         climb space: {}\n\
          {}\n\
          [Apex S21 rules where measured; see sheets/constants.tsv]",
         s.tick,
@@ -575,6 +576,14 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
         },
         sim.last_event.0,
         s.tick.saturating_sub(sim.last_event.1),
+        if sim.frame_locked {
+            format!(
+                "1 tick per frame, {:.0} fps (--fps N to cap)",
+                sim.tick_rate
+            )
+        } else {
+            format!("fixed {} Hz (--hz)", sim.tick_rate)
+        },
         match sim.last_hop {
             None => "-".to_owned(),
             Some((ticks, ground, penalty, wasted)) => format!(
@@ -587,16 +596,24 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
                 }
             ),
         },
-        if sim.frame_locked {
-            format!(
-                "1 tick per frame, {:.0} fps (--fps N to cap)",
-                sim.tick_rate
-            )
-        } else {
-            format!("fixed {} Hz (--hz)", sim.tick_rate)
-        },
+        climb_space_text(s, &sim.cfg),
         rec,
     );
+}
+
+/// Height above the climb-space baseline and the zone a wall jump would use.
+fn climb_space_text(s: &MovementState, cfg: &MovementConfig) -> String {
+    let z = s.position.z - s.climb_base;
+    let zone = if z >= cfg.climb_space_height {
+        "above the cutoff (no climbing)"
+    } else if z <= cfg.climb_mini_zone_top {
+        "MINI (mini-bounce)"
+    } else if z <= cfg.climb_green_zone_top {
+        "GREEN (wall bounce)"
+    } else {
+        "neutral (wall push)"
+    };
+    format!("{z:+6.1} u above baseline   zone {zone}")
 }
 
 fn hotkeys(keys: Res<ButtonInput<KeyCode>>, mut sim: ResMut<Sim>) {

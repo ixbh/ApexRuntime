@@ -50,8 +50,11 @@ pub struct Climb {
     /// Horizontal wall normal (pointing away from the wall).
     pub normal: Vec3,
     pub t: f32,
-    /// The climb speed has reached its peak and is decaying.
+    /// The climb speed ceiling has peaked and is decaying (since `peak_t`).
     pub peaked: bool,
+    pub peak_t: f32,
+    /// Feet height where this climb attached (attach offset is measured from it).
+    pub attach_z: f32,
 }
 
 /// Complete movement state of one player. Plain data: cloning it and stepping
@@ -93,8 +96,12 @@ pub struct MovementState {
     /// Traversal in progress (at most one is `Some`).
     pub mantle: Option<Mantle>,
     pub climb: Option<Climb>,
-    /// A wall climb already happened this airtime (one per airtime).
-    pub climbed_this_air: bool,
+    /// Climb space baseline: feet height at the last ground contact, lowered
+    /// by detach penalties and by falling below it.
+    pub climb_base: f32,
+    /// Last climb's attach height and wall normal this airtime (reattach rule).
+    pub last_attach_z: Option<f32>,
+    pub last_attach_normal: Vec3,
     /// Wall hit by last tick's move (horizontal normal, zero if none) and how
     /// fast the player was moving into it, for next tick's mantle/climb check.
     pub last_wall_normal: Vec3,
@@ -105,6 +112,7 @@ impl MovementState {
     pub fn at(position: Vec3) -> Self {
         Self {
             position,
+            climb_base: position.z,
             time_since_slide_boost: f32::MAX,
             ..Self::default()
         }

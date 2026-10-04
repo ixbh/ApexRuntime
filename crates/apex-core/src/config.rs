@@ -106,20 +106,15 @@ pub struct MovementConfig {
     pub mantle_boost_enabled: bool,
 
     /// Wall climb: attaches when vz falls to `climb_attach_vz`, accelerates to
-    /// the peak, then decays exponentially; ends with a push after `climb_duration`.
+    /// the peak, then decays exponentially; ends with a push at the climb-space cutoff.
     pub climb_attach_vz: f32,
     pub climb_accel: f32,
     pub climb_peak_speed: f32,
     pub climb_decay_rate: f32,
-    pub climb_duration: f32,
     pub climb_end_push_up: f32,
     pub climb_end_push_out: f32,
     /// Jump off a wall: push along the normal (and along the A/D input).
     pub wall_jump_push: f32,
-    /// Early wall jump (wall bounce): vz ramps min → max over the window.
-    pub wall_bounce_window: f32,
-    pub wall_bounce_vz_min: f32,
-    pub wall_bounce_vz_max: f32,
     /// Distance ahead in which a wall counts as touched.
     pub wall_probe_dist: f32,
     /// Pushing into a wall: wish·(−normal) above this, or moving into it faster
@@ -134,6 +129,11 @@ pub struct MovementConfig {
     pub climb_side_speed: f32,
     pub climb_up_side_speed: f32,
     pub climb_side_accel: f32,
+    pub climb_up_side_accel: f32,
+    /// Sideways climb while rising: dvz/dt = −gravity + drag·vz.
+    pub climb_side_vz_drag: f32,
+    /// The climb speed ceiling starts decaying at this time (or at the peak).
+    pub climb_peak_time: f32,
     /// Climbing slower than `climb_nonupward_min_vz` detaches once the climb
     /// is older than `climb_nonupward_time`.
     pub climb_nonupward_time: f32,
@@ -144,6 +144,24 @@ pub struct MovementConfig {
     pub climb_suction: f32,
     /// A climb becomes a mantle only with input this much into the wall (50°).
     pub mantle_input_min_dot: f32,
+    /// Climb space (wiki): measured from the baseline (feet at the last ground
+    /// contact). Climbing ends at `climb_space_height` above it or
+    /// `climb_attach_offset` above the attach point; zones decide wall jumps.
+    pub climb_space_height: f32,
+    pub climb_attach_offset: f32,
+    pub climb_mini_zone_top: f32,
+    pub climb_green_zone_top: f32,
+    /// Climb space drop on a detach (double for green/neutral wall jumps).
+    pub climb_detach_penalty: f32,
+    /// Reattach on the same wall needs dropping below the last attach point;
+    /// a wall with normal·last < this counts as a different wall.
+    pub climb_reattach_min_dot: f32,
+    /// Green-zone wall jump: vz = sqrt(a − b·height above the baseline).
+    pub wall_bounce_a: f32,
+    pub wall_bounce_b: f32,
+    /// Mini-zone wall jump: height gained and push away from the wall.
+    pub wall_mini_jump_height: f32,
+    pub wall_mini_push: f32,
 
     /// Source `sv_airaccelerate`. `[source]`
     pub air_accel: f32,
@@ -222,13 +240,9 @@ impl MovementConfig {
         climb_accel: sheet::CLIMB_ACCEL,
         climb_peak_speed: sheet::CLIMB_PEAK_SPEED,
         climb_decay_rate: sheet::CLIMB_DECAY_RATE,
-        climb_duration: sheet::CLIMB_DURATION,
         climb_end_push_up: sheet::CLIMB_END_PUSH_UP,
         climb_end_push_out: sheet::CLIMB_END_PUSH_OUT,
         wall_jump_push: sheet::WALL_JUMP_PUSH,
-        wall_bounce_window: sheet::WALL_BOUNCE_WINDOW,
-        wall_bounce_vz_min: sheet::WALL_BOUNCE_VZ_MIN,
-        wall_bounce_vz_max: sheet::WALL_BOUNCE_VZ_MAX,
         wall_probe_dist: sheet::WALL_PROBE_DIST,
         wall_push_min_dot: sheet::WALL_PUSH_MIN_DOT,
         wall_push_min_speed: sheet::WALL_PUSH_MIN_SPEED,
@@ -236,11 +250,24 @@ impl MovementConfig {
         climb_side_speed: sheet::CLIMB_SIDE_SPEED,
         climb_up_side_speed: sheet::CLIMB_UP_SIDE_SPEED,
         climb_side_accel: sheet::CLIMB_SIDE_ACCEL,
+        climb_up_side_accel: sheet::CLIMB_UP_SIDE_ACCEL,
+        climb_side_vz_drag: sheet::CLIMB_SIDE_VZ_DRAG,
+        climb_peak_time: sheet::CLIMB_PEAK_TIME,
         climb_nonupward_time: sheet::CLIMB_NONUPWARD_TIME,
         climb_nonupward_min_vz: sheet::CLIMB_NONUPWARD_MIN_VZ,
         climb_look_min_dot: sheet::CLIMB_LOOK_MIN_DOT,
         climb_suction: sheet::CLIMB_SUCTION,
         mantle_input_min_dot: sheet::MANTLE_INPUT_MIN_DOT,
+        climb_space_height: sheet::CLIMB_SPACE_HEIGHT,
+        climb_attach_offset: sheet::CLIMB_ATTACH_OFFSET,
+        climb_mini_zone_top: sheet::CLIMB_MINI_ZONE_TOP,
+        climb_green_zone_top: sheet::CLIMB_GREEN_ZONE_TOP,
+        climb_detach_penalty: sheet::CLIMB_DETACH_PENALTY,
+        climb_reattach_min_dot: sheet::CLIMB_REATTACH_MIN_DOT,
+        wall_bounce_a: sheet::WALL_BOUNCE_A,
+        wall_bounce_b: sheet::WALL_BOUNCE_B,
+        wall_mini_jump_height: sheet::WALL_MINI_JUMP_HEIGHT,
+        wall_mini_push: sheet::WALL_MINI_PUSH,
         air_accel: sheet::AIR_ACCEL,
         air_speed_cap: sheet::AIR_SPEED_CAP,
         step_height: sheet::STEP_HEIGHT,

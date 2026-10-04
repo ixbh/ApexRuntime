@@ -308,8 +308,13 @@ fn finish_tick(
         // Walked off a ledge (or started a mantle): not a jump.
         s.air_from_jump = false;
     }
+    // Climb space follows the ground; in the air it only moves down (falling
+    // below the baseline drags it along).
     if s.on_ground() {
-        s.climbed_this_air = false;
+        s.climb_base = s.position.z;
+        s.last_attach_z = None;
+    } else if s.position.z < s.climb_base {
+        s.climb_base = s.position.z;
     }
 
     // --- Timers / bookkeeping. ---

@@ -88,6 +88,9 @@ while i < len(rows):
         within = sum(d < 5 for d in diffs)
         summary.append(within / len(diffs))
         print(f"t={f(r,'game_time'):8.2f} wall at {wall_x:5.1f}: vz within 5 u/s on {within}/{len(diffs)} ticks, worst {max(diffs):6.1f}")
+        if os.environ.get('VERBOSE'):
+            for p, q in zip(port, seg):
+                print(f"     tick {p['tick']:>3} game vz {f(q,'pv_z'):7.1f} h {math.hypot(f(q,'pv_x'), f(q,'pv_y')):6.1f} btn {q['buttons'][-4:]} | ours vz {f(p,'vel_z'):7.1f} h {f(p,'speed_h'):6.1f} {p['mode']}")
         print(f"   game climb ticks: {game_modes}")
         print(f"   ours climb ticks: {modes}")
         i = j

@@ -101,9 +101,25 @@ fn wall_climb_matches_trace() {
 }
 
 #[test]
-fn climb_only_once_per_airtime() {
+fn climb_space_drops_after_the_end_push() {
+    // Wiki: the end push is a non-jump detach (climb space -128). Any later
+    // attach this airtime must be below the lowered cutoff (147 - 128 = 19)
+    // and below the first attach point.
     let run = climb_run(DT60, 300);
-    assert_eq!(run.iter().filter(|(_, _, r)| r.climb_started).count(), 1);
+    let ends: Vec<_> = run.iter().filter(|(_, _, r)| r.climb_finished).collect();
+    assert_eq!(ends.len(), 1);
+    assert!(
+        (ends[0].1.climb_base + 128.0).abs() < 0.5,
+        "base {}",
+        ends[0].1.climb_base
+    );
+    for (_, s, r) in run.iter().filter(|(_, _, r)| r.climb_started).skip(1) {
+        assert!(
+            s.position.z < 19.5,
+            "re-attached at {} ({r:?})",
+            s.position.z
+        );
+    }
 }
 
 fn wall_jump_at(climb_t: f32, right: f32) -> Vec3 {
@@ -148,19 +164,63 @@ fn wall_jump_mid_climb_keeps_climb_speed() {
     assert!(v.z > 80.0 && v.z < 140.0, "vz {}", v.z);
 }
 
+/// On the wall at `z` above the baseline moving up at `vz`, jump holding
+/// `right` (yaw 0: the wall is ahead along +X).
+fn wall_jump_from_zone(z: f32, vz: f32, right: f32) -> (MovementState, StepReport) {
+    let w = world_with_block(45.0, 2000.0);
+    let cfg = MovementConfig::default();
+    let mut s = MovementState::at(Vec3::new(45.0 - 16.0 - 1.0 / 32.0, 0.0, z));
+    s.climb_base = 0.0;
+    s.velocity = Vec3::new(0.0, 0.0, vz);
+    s.climb = Some(Climb {
+        normal: Vec3::new(-1.0, 0.0, 0.0),
+        t: 0.05,
+        peaked: false,
+        peak_t: 0.0,
+        attach_z: z,
+    });
+    let (n, r) = step_with_report(&s, &input(0.0, right, Buttons::JUMP), &cfg, &w, DT60);
+    assert!(r.wall_jump, "{r:?}");
+    (n, r)
+}
+
 #[test]
 fn wall_bounce_matches_trace() {
-    // Session 5 test 3: |h| 354-365 (258·√2), vz 332-340 at ~0.06-0.08 s
-    // contact, 371-374 at ~0.1 s.
-    let v = wall_jump_at(0.067, 1.0);
+    // 9 S21 green-zone bounces (A held): vz follows the height above the
+    // baseline, not wall-contact time: 380.4 @24.7, 371.3 @28.0, 339.8
+    // @34.4, 260.4 @44.8; |h| 354-365 (258·√2). Climb space -256.
+    for (z, vin, want) in [
+        (24.7, 21.8, 380.4),
+        (28.0, 6.1, 371.3),
+        (34.4, 56.0, 339.8),
+        (44.8, 35.4, 260.4),
+    ] {
+        let (s, _) = wall_jump_from_zone(z, vin, 1.0);
+        assert!(
+            (s.velocity.z - want).abs() < 10.0,
+            "z {z}: vz {}",
+            s.velocity.z
+        );
+        assert!((s.velocity.horizontal().length() - 364.9).abs() < 1.0);
+        assert!((s.climb_base + 256.0).abs() < 1e-3);
+    }
+}
+
+#[test]
+fn mini_and_neutral_zone_wall_jumps() {
+    // Mini zone (wiki): +28.21 u hop, 188 out, climb space -128.
+    let (s, _) = wall_jump_from_zone(10.0, 0.0, 0.0);
     assert!(
-        (v.horizontal().length() - 364.9).abs() < 1.0,
-        "|h| {}",
-        v.horizontal().length()
+        (s.velocity.z - (2.0f32 * 750.0 * 28.21).sqrt()).abs() < 1.0,
+        "vz {}",
+        s.velocity.z
     );
-    assert!((v.z - 336.0).abs() < 8.0, "vz {}", v.z);
-    let v = wall_jump_at(0.1, 1.0);
-    assert!((v.z - 372.5).abs() < 4.0, "vz {}", v.z);
+    assert!((s.velocity.horizontal().length() - 188.0).abs() < 0.5);
+    assert!((s.climb_base + 128.0).abs() < 1e-3);
+    // Neutral zone: no height gain (S21: 122.4 -> 107.3 at 60 fps), 258 out.
+    let (s, _) = wall_jump_from_zone(100.0, 122.4, 0.0);
+    assert!((s.velocity.z - 109.9).abs() < 0.5, "vz {}", s.velocity.z);
+    assert!((s.velocity.horizontal().length() - 258.0).abs() < 0.5);
 }
 
 /// Walk into a 48 u ledge holding W (sprint), returning the mantle duration

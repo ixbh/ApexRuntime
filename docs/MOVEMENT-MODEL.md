@@ -228,9 +228,26 @@ relative to the wall decides the climb each tick.
   "No-ma climb"). Speed along the wall is carried into the climb and out of
   wall jumps and the end push. The player is pushed into the wall each tick
   (`climb_suction`) and follows the wall's surface.
-Not modelled yet: climb space / zones (baseline, mini/green/neutral zones,
-attach offset 100, cutoff 147) — wall-jump height still comes from the
-measured contact-time ramp.
+
+**Climb space and zones (wiki + S21, implemented 2026-10-04).** Baseline =
+feet at the last ground contact (dragged down when falling below it).
+* The climb ends with the end push at **147 u above the baseline** (7/7 S21
+  W climbs end at 147.2-147.6; the "51 ticks" was the time to get there) or
+  100 u above the attach point.
+* Wall jump by zone: **mini** (0-19) +28.21 u hop, 188 out; **green**
+  (19-47) vz = sqrt(244864 − 3855.5·z) (9 S21 bounces, rms 4.5 u/s; the old
+  contact-time ramp had 15.5); **neutral** keeps the climb vz minus a tick
+  of gravity, 258 out.
+* Climb space drops 128 on a non-jump detach (crouch, back, look away, 1 s
+  timer, end push) or a mini-zone jump, 256 on a green/neutral jump, 0 when
+  the climb becomes a mantle or you slip off the side/top.
+* Reattach in the air: below the last attach point, or on a wall whose
+  normal differs by ≥ 25.8°. Attaching also works while falling.
+* No input on the wall: slip (gravity), until the 1 s non-upward timer.
+* Measured on the t=388.3 climb (W+A → A → W+A): along-the-wall speed rises
+  114 u/s² while climbing up (to 115 × A/D share), 231 u/s² sideways (to
+  258); sideways while rising dvz/dt = −750 + 1.5·vz; a late W re-press
+  climbs only up to a decaying ceiling (game 95, ours 76: open).
 
 ### Wall jump / wall bounce
 Jump while climbing: 258 u/s along the wall normal, plus 258 along the

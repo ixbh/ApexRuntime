@@ -119,6 +119,10 @@ pub struct MovementState {
     /// jump (None = not available), whether we left in a slide, and how long
     /// we had been on the ground (for the bhop penalty).
     pub coyote: Option<Coyote>,
+    /// Seconds since the current slide started, and the boost it gave
+    /// (for the deadslide rule).
+    pub slide_t: f32,
+    pub slide_boost_given: f32,
 }
 
 /// Coyote-time bookkeeping (see `MovementState::coyote`).

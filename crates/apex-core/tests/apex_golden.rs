@@ -131,7 +131,8 @@ fn slide_boost_cap_cooldown_and_end() {
         s.horizontal_speed()
     );
 
-    // From 220: +174.4 uncapped (trace 219.98 -> 394.24 before decel).
+    // From 220: sprint accel for the tick, then +172.5 uncapped (trace
+    // 219.98 -> 394.24 before decel).
     let s2 = grounded(&w, &cfg, Vec3::new(219.98, 0.0, 0.0));
     let (s2, _) = step_with_report(&s2, &slide, &cfg, &w, DT60);
     let decel = (cfg.slide_decel_const + cfg.slide_decel_linear * 394.38) * DT60;
@@ -573,5 +574,43 @@ fn lurch_matches_known_angle_bot_session() {
             "{ang} deg at {at} s: speed {} vs {speed}",
             after.length()
         );
+    }
+}
+
+#[test]
+fn deadslide_matches_bot_sweep() {
+    // Session 7 (apex-inputbot): sprint at 299, slide (boost capped: 460),
+    // jump N frames later at 165 fps. In the log (jump row - slide row):
+    // up to 33 ticks the speed drops by exactly 161.0 (the boost), 34 ticks
+    // (0.206 s) is the boundary (1 of 2), 36+ kept. Here the jump lands
+    // n + 1 ticks after the slide-start tick.
+    let w = flat();
+    let cfg = MovementConfig::default();
+    let dt = 1.0 / 165.0;
+    let slide = input(1.0, 0.0, Buttons::SPRINT | Buttons::CROUCH);
+    for n in [0usize, 2, 10, 20, 30, 32, 35, 40] {
+        let mut s = grounded(&w, &cfg, Vec3::new(299.0, 0.0, 0.0));
+        s.time_on_ground = 2.0;
+        let (n0, r) = step_with_report(&s, &slide, &cfg, &w, dt);
+        assert!(r.slide_boosted);
+        s = n0;
+        for _ in 0..n {
+            s = step(&s, &slide, &cfg, &w, dt);
+        }
+        let before = s.horizontal_speed();
+        let (after, r) = step_with_report(
+            &s,
+            &input(1.0, 0.0, Buttons::SPRINT | Buttons::CROUCH | Buttons::JUMP),
+            &cfg,
+            &w,
+            dt,
+        );
+        assert!(r.jumped);
+        let lost = before - after.horizontal_speed();
+        if n < 33 {
+            assert!((lost - 161.0).abs() < 1.0, "N={n}: lost {lost}");
+        } else {
+            assert!(lost.abs() < 1.0, "N={n}: lost {lost}");
+        }
     }
 }

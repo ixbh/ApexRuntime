@@ -84,6 +84,9 @@ pub struct MovementConfig {
     /// Coyote time: a jump still works this long after leaving the ground
     /// without one.
     pub coyote_time: f32,
+    /// Slide-jumping before this long into a slide (while above
+    /// `slide_jump_min_speed`) loses that slide's boost: a deadslide.
+    pub deadslide_time: f32,
     pub bhop_speed_penalty: f32,
 
     /// Mantle: duration = base + per_unit × ledge height above the feet.
@@ -233,6 +236,7 @@ impl MovementConfig {
         slide_jump_min_speed: sheet::SLIDE_JUMP_MIN_SPEED,
         bhop_skip_time: sheet::BHOP_SKIP_TIME,
         coyote_time: sheet::COYOTE_TIME,
+        deadslide_time: sheet::DEADSLIDE_TIME,
         bhop_speed_penalty: sheet::BHOP_SPEED_PENALTY,
         mantle_duration_base: sheet::MANTLE_DURATION_BASE,
         mantle_duration_per_unit: sheet::MANTLE_DURATION_PER_UNIT,

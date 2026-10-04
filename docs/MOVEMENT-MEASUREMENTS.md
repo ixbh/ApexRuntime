@@ -165,6 +165,27 @@ Markers: crouch taps standing still (pairs ~1.05 s apart = hit).
   above the baseline, rising slowly (dvz/dt = -492 + 2.66·vz), jump vz
   matches the green-zone fit within 2-6 u/s on 10 more bounces.
 
+## Session 7 (2026-10-04, 165 fps, apex-inputbot): known-angle lurch, deadslide
+
+First automated capture (`docs/INPUTBOT.md`; attempt times in
+`traces/raw/bot-*.json`; analysis `research/analysis/s7_lurch.py`,
+`s7_deadslide.py`). All 18 + 42 attempts landed.
+- **Lurch strength is k = 0.70** (lerp-normalize), flat to ~0.196 s, then
+  linear to 0 at 0.50 s: wish 15/30/45/60° at 0.15 s turn 10.5/21.1/31.9/
+  43.0° (k 0.70 exactly); k 0.465 at 0.30 s, 0.235 at 0.40 s. The old 0.492
+  plateau came from 90° presses that the velocity-change cap cuts short. The
+  cap cuts the change along its own line (90° at 0.15 s: 51.0°/227.5
+  measured, 51.1°/227.8 predicted; 120°: 54.3°/177.0 vs 54.2°/177.3).
+  Session 3 lurch replays: 1.91° -> 0.17° mean error.
+- **Deadslide**: slide-jumping up to 33 ticks (0.200 s) after the slide
+  starts loses exactly the boost (460 -> 299, -161.0, every run); 34 ticks
+  (0.206 s) 1 of 2; 36+ kept. The log's duck state flips 1 -> 2 at the
+  same tick (the wiki's "not crouched until ~0.24 s" theory; it is 0.206 s).
+- **Slide boost is exactly +172.5** (150 x 1.15, wiki), applied after that
+  tick's sprint acceleration (34 uncapped samples); our old 174.4 had
+  absorbed the first decel tick.
+- Bot runs were at 260 u/s: sprint with a weapon out (wiki: 260 unholstered, 299 holstered).
+
 ## Still to measure
 
 lurch (clean A/D taps at fixed times after takeoff; exact window and

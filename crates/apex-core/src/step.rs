@@ -126,7 +126,7 @@ pub fn step_with_report(
 
     // Slide state first: landing with crouch held re-enters the slide on the
     // landing tick, so a jump on that tick is already a slide-jump (S21 traces).
-    update_slide(&mut s, &mut rep, input, pressed, was_on_ground, cfg);
+    update_slide(&mut s, &mut rep, input, pressed, was_on_ground, cfg, dt);
 
     // --- Jump: leaving the ground *before* friction is what preserves speed on a bhop. ---
     let wants_jump =
@@ -164,12 +164,28 @@ pub fn step_with_report(
         if bhop && speed > cfg.sprint_speed {
             target = (speed - cfg.bhop_speed_penalty).max(cfg.sprint_speed);
         }
+        // Deadslide (session 7 sweep): jumping before the slide has settled
+        // (0.206 s, the log's duck state 1 -> 2) while above 350 gives back
+        // that slide's boost: 460 -> 299 (-161.0) on every run up to 33
+        // frames at 165 fps; from 36 frames the speed is kept.
+        let deadslide = s.sliding
+            && s.slide_t < cfg.deadslide_time
+            && speed > cfg.slide_jump_min_speed
+            && s.slide_boost_given > 0.0;
+        if deadslide {
+            target = (target - s.slide_boost_given).max(0.0);
+        }
         if from_slide {
             launch *= cfg.slide_jump_mult;
             // Slide long jump: an unfatigued slide-jump is at least 350 u/s
             // horizontally (S21 traces: 316..335 -> 350.0; faster is kept).
             // Not on a bhop: 300.9 -> 299 at 0.8 s after landing.
-            if !bhop && frac >= 1.0 && speed > 1e-3 && speed < cfg.slide_jump_min_speed {
+            if !deadslide
+                && !bhop
+                && frac >= 1.0
+                && speed > 1e-3
+                && speed < cfg.slide_jump_min_speed
+            {
                 target = cfg.slide_jump_min_speed;
             }
         }
@@ -368,6 +384,9 @@ fn finish_tick(
         s.lurch_t += dt;
     }
     s.time_since_slide_boost = (s.time_since_slide_boost + dt).min(f32::MAX / 2.0);
+    if s.sliding {
+        s.slide_t += dt;
+    }
     s.prev_buttons = input.buttons;
     s.prev_forward = input.forward;
     s.prev_right = input.right;
@@ -492,6 +511,7 @@ fn update_slide(
     pressed: Buttons,
     was_on_ground: bool,
     cfg: &MovementConfig,
+    dt: f32,
 ) {
     if !s.on_ground() {
         s.sliding = false;
@@ -506,17 +526,23 @@ fn update_slide(
     {
         s.sliding = true;
         s.crouched = true;
+        s.slide_t = 0.0;
+        s.slide_boost_given = 0.0;
         rep.slide_started = true;
         // Boost only for slides started from a sprint on the ground (re-slides
         // on landing are not boosted: 156 of 168 in the S21 traces).
         let sprinting =
             was_on_ground && input.buttons.contains(Buttons::SPRINT) && input.forward > 0.0;
         if sprinting && s.time_since_slide_boost >= cfg.slide_boost_cooldown {
-            let boosted = (speed + cfg.slide_boost)
+            // That tick's sprint acceleration lands first, then +172.5 (S21:
+            // 219.98 -> 394.24 at 60 fps, 232.2 -> 405.4 at 165), capped.
+            let accelerated = speed + ground_accel_rate(speed, cfg) * dt;
+            let boosted = (accelerated + cfg.slide_boost)
                 .min(cfg.slide_boost_cap)
                 .max(speed);
             s.velocity.x *= boosted / speed;
             s.velocity.y *= boosted / speed;
+            s.slide_boost_given = boosted - accelerated.min(boosted);
             s.time_since_slide_boost = 0.0;
             rep.slide_boosted = true;
         }

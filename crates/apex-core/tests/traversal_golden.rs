@@ -305,3 +305,47 @@ fn superglide_window_is_last_0_15_s() {
     let (v, r) = late_jump(outside, true);
     assert!(!r.superglide && r.jumped && v.horizontal().length() < 0.01);
 }
+
+#[test]
+fn interrupted_mantle_never_leaves_the_hull_inside_the_ledge() {
+    // Jump off at every point of a mantle: the position must always be free.
+    let w = world_with_block(40.0, 48.0);
+    let cfg = MovementConfig::default();
+    for jump_tick in 0..40 {
+        let mut s = grounded_at(&w, &cfg, 0.0, 0.0);
+        let mut ticks = 0;
+        let mut started = false;
+        for _ in 0..400 {
+            let b = if started && ticks == jump_tick {
+                SPRINT_W | Buttons::JUMP
+            } else {
+                SPRINT_W
+            };
+            let (n, r) = step_with_report(&s, &input(1.0, 0.0, b), &cfg, &w, DT60);
+            s = n;
+            if started {
+                ticks += 1;
+                assert!(
+                    w.hull_fits(s.position, cfg.hull(s.crouched)),
+                    "inside the ledge at tick {ticks} (jump at {jump_tick})"
+                );
+            }
+            if r.mantle_started {
+                started = true;
+            }
+            if started && ticks > jump_tick + 5 {
+                break;
+            }
+        }
+    }
+}
+
+#[test]
+fn a_hull_started_inside_solid_is_pushed_out() {
+    let w = world_with_block(40.0, 48.0);
+    let cfg = MovementConfig::default();
+    let s = MovementState::at(Vec3::new(60.0, 0.0, 20.0)); // inside the block
+    let (s, r) = step_with_report(&s, &MovementInput::default(), &cfg, &w, DT60);
+    assert!(r.unstuck);
+    assert!(w.hull_fits(s.position, cfg.hull(s.crouched)));
+}

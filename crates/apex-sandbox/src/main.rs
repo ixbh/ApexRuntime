@@ -8,7 +8,8 @@
 //!           scroll up = tap W · scroll down = tap jump (Apex-style binds)
 //!           F1 HUD · F2 always-sprint · F5 start/stop recording · R respawn
 //!           Esc release mouse
-//! Options:  --hz N   simulation ticks per second (default 60; e.g. 165)
+//! Options:  --hz N    simulation ticks per second (default 144; e.g. 165)
+//!           --fov N   Apex FOV slider value (default 110)
 //!
 //! Scroll notches become one-tick presses with a release tick between them,
 //! so every notch is a *new* press (what lurch / tap-strafing keys off).
@@ -40,19 +41,32 @@ pub fn to_bevy(v: apex_math::Vec3) -> Vec3 {
 /// Default simulation rate. Apex runs movement once per client frame, so
 /// frame-tight tech (superglide: crouch exactly one tick after jump) depends
 /// on it: run with `--hz 165` to practise at 165 fps timing.
-const DEFAULT_TICK_RATE: f64 = 60.0;
+const DEFAULT_TICK_RATE: f64 = 144.0;
+/// Apex's FOV slider value (horizontal degrees at 4:3). 110 is common.
+const DEFAULT_APEX_FOV: f32 = 110.0;
 
-fn tick_rate_from_args() -> f64 {
+fn arg_value(name: &str) -> Option<f64> {
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
-        if a == "--hz"
-            && let Some(v) = args.next().and_then(|v| v.parse::<f64>().ok())
-            && (10.0..=1000.0).contains(&v)
-        {
-            return v;
+        if a == name {
+            return args.next().and_then(|v| v.parse::<f64>().ok());
         }
     }
-    DEFAULT_TICK_RATE
+    None
+}
+
+/// Apex FOV slider (horizontal at 4:3) -> vertical FOV in radians, which is
+/// what Bevy wants. Apex keeps the vertical FOV and widens horizontally on
+/// 16:9, so this matches what Apex shows at any aspect ratio.
+fn apex_fov_to_vertical(apex_fov_deg: f32) -> f32 {
+    let half_h43 = (apex_fov_deg.clamp(70.0, 120.0) * 0.5).to_radians();
+    2.0 * (half_h43.tan() * 0.75).atan()
+}
+
+fn tick_rate_from_args() -> f64 {
+    arg_value("--hz")
+        .filter(|v| (10.0..=1000.0).contains(v))
+        .unwrap_or(DEFAULT_TICK_RATE)
 }
 const MOUSE_DEG_PER_COUNT: f32 = 0.022 * 2.0; // Source m_yaw 0.022 × sensitivity 2
 
@@ -234,7 +248,7 @@ fn setup_world(
         PlayerCamera,
         Camera3d::default(),
         Projection::Perspective(PerspectiveProjection {
-            fov: 70.0_f32.to_radians(),
+            fov: apex_fov_to_vertical(arg_value("--fov").map_or(DEFAULT_APEX_FOV, |v| v as f32)),
             near: 0.02,
             ..default()
         }),

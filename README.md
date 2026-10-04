@@ -44,8 +44,9 @@ Sandbox controls: **click** to capture the mouse · WASD · Space jump ·
 Ctrl/C/L crouch · Shift sprint · scroll up = W tap · scroll down = jump tap ·
 F1 HUD · F2 always-sprint · F5 start/stop recording (writes a CSV trace and a
 replayable input script to `traces/`) · R respawn · Esc release the mouse.
-`cargo run -p apex-sandbox --release -- --hz 165` simulates at 165 ticks/s
-(superglide timing is per tick, so practise at your real frame rate).
+`cargo run -p apex-sandbox --release -- --hz 165 --fov 110` simulates at 165
+ticks/s (default 144; superglide timing is per tick, so practise at your real
+frame rate) with Apex's FOV slider value (default 110).
 
 ## Ground rules
 

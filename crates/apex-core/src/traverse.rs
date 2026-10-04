@@ -302,10 +302,15 @@ pub fn mantle_tick(
     } else {
         1.0
     };
-    // Rise early (ease-out), move onto the ledge late (ease-in). Only the
-    // endpoints and the duration are measured.
-    let rise = 1.0 - (1.0 - u) * (1.0 - u);
-    let over = u * u;
+    // Rise to the ledge height first (ease-out), then move onto it. Never
+    // moving forward below the top keeps the hull out of the ledge at every
+    // tick, so an interrupted mantle (jump-off) always leaves a valid
+    // position. Only the endpoints and the duration are measured.
+    const RISE_PART: f32 = 0.7;
+    let r = (u / RISE_PART).min(1.0);
+    let rise = 1.0 - (1.0 - r) * (1.0 - r);
+    let o = ((u - RISE_PART) / (1.0 - RISE_PART)).clamp(0.0, 1.0);
+    let over = o * o * (3.0 - 2.0 * o);
     let span = m.end - m.start;
     s.position = Vec3::new(
         m.start.x + span.x * over,

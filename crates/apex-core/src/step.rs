@@ -51,6 +51,8 @@ pub struct StepReport {
     pub climb_started: bool,
     pub climb_finished: bool,
     pub wall_jump: bool,
+    /// The player started the tick inside solid and was pushed out.
+    pub unstuck: bool,
     pub hit_wall: bool,
     pub wall_normal: Vec3,
 }
@@ -95,6 +97,7 @@ pub fn step_with_report(
 
     let traversing = s.mantle.is_some() || s.climb.is_some();
     if !traversing {
+        rep.unstuck = unstick(&mut s, cfg, world);
         update_crouch(&mut s, input, cfg, world, dt);
         categorize(&mut s, cfg, world);
     }
@@ -478,6 +481,45 @@ fn clamp_velocity(v: &mut Vec3, cfg: &MovementConfig) {
     v.x = v.x.clamp(-m, m);
     v.y = v.y.clamp(-m, m);
     v.z = v.z.clamp(-m, m);
+}
+
+/// Safety net (Source `CheckStuck` / IW4 `PM_CorrectAllSolid` in spirit): if
+/// the hull starts the tick inside solid, move it to the nearest free spot,
+/// preferring up, then sideways. Returns whether it had to.
+fn unstick(s: &mut MovementState, cfg: &MovementConfig, world: &impl CollisionWorld) -> bool {
+    let hull = cfg.hull(s.crouched);
+    if world.hull_fits(s.position, hull) {
+        return false;
+    }
+    for step in 1..=36 {
+        let up = s.position + Vec3::new(0.0, 0.0, step as f32);
+        if world.hull_fits(up, hull) {
+            s.position = up;
+            return true;
+        }
+    }
+    for r in 1..=24 {
+        let r = r as f32;
+        for (dx, dy) in [
+            (r, 0.0),
+            (-r, 0.0),
+            (0.0, r),
+            (0.0, -r),
+            (r, r),
+            (-r, r),
+            (r, -r),
+            (-r, -r),
+        ] {
+            for dz in [0.0, 4.0, 12.0, 24.0] {
+                let p = s.position + Vec3::new(dx, dy, dz);
+                if world.hull_fits(p, hull) {
+                    s.position = p;
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 /// Put a fresh state on the ground if it starts within the ground probe of a

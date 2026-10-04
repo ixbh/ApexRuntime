@@ -42,8 +42,11 @@ cargo run -p apex-telemetry --bin apex-replay -- scripts/inputs/bhop.json --out 
 
 Sandbox controls: **click** to capture the mouse · WASD · Space jump ·
 Ctrl/C/L crouch · Shift sprint · scroll up = W tap · scroll down = jump tap ·
-F1 HUD · F2 always-sprint · F5 start/stop recording (writes a CSV trace and a
-replayable input script to `traces/`) · R respawn · Esc release the mouse.
+F1 HUD · F2 always-sprint · F3 first/third person (hull-sized body) · F4 camera
+feel (bob, tilt, landing dip) · F5 start/stop recording (writes a CSV trace and
+a replayable input script to `traces/`) · F6 movement trail · R respawn · Esc
+release the mouse. Surfaces carry a measuring grid: thin line every 16 u, bold
+every 64 u (walls double as height rulers).
 `cargo run -p apex-sandbox --release -- --hz 165 --fov 110` simulates at 165
 ticks/s (default 144; superglide timing is per tick, so practise at your real
 frame rate) with Apex's FOV slider value (default 110).

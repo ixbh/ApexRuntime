@@ -6,7 +6,8 @@
 //!
 //! Controls: mouse look · WASD · Space jump · Ctrl/C/L crouch · Shift sprint
 //!           scroll up = tap W · scroll down = tap jump (Apex-style binds)
-//!           F1 HUD · F2 always-sprint · F5 start/stop recording · R respawn
+//!           F1 HUD · F2 always-sprint · F3 first/third person · F4 camera feel
+//!           F5 start/stop recording · F6 movement trail · R respawn
 //!           Esc release mouse
 //! Options:  --hz N    simulation ticks per second (default 144; e.g. 165)
 //!           --fov N   Apex FOV slider value (default 110)
@@ -15,6 +16,7 @@
 //! so every notch is a *new* press (what lurch / tap-strafing keys off).
 
 mod brush_mesh;
+mod view;
 
 use std::path::PathBuf;
 
@@ -82,16 +84,23 @@ fn main() {
         }))
         .insert_resource(ClearColor(Color::srgb(0.53, 0.66, 0.80)))
         .insert_resource(Sim::new())
-        .add_systems(Startup, (setup_world, setup_hud))
+        .insert_resource(view::ViewState::default())
+        .add_systems(
+            Startup,
+            ((setup_world, view::setup_view).chain(), setup_hud),
+        )
         .add_systems(
             Update,
             (
                 grab_cursor,
                 look,
                 simulate,
-                place_camera,
+                view::place_camera,
+                view::animate_arms,
+                view::draw_trail,
                 update_hud,
                 hotkeys,
+                view::view_hotkeys,
             )
                 .chain(),
         )
@@ -99,35 +108,37 @@ fn main() {
 }
 
 #[derive(Resource)]
-struct Sim {
-    world: BrushWorld,
-    cfg: MovementConfig,
-    clock: FixedClock,
-    prev: MovementState,
-    cur: MovementState,
-    last_report: StepReport,
-    last_input: MovementInput,
-    yaw: f32,
-    pitch: f32,
+pub(crate) struct Sim {
+    pub(crate) world: BrushWorld,
+    pub(crate) cfg: MovementConfig,
+    pub(crate) clock: FixedClock,
+    pub(crate) prev: MovementState,
+    pub(crate) cur: MovementState,
+    pub(crate) last_report: StepReport,
+    pub(crate) last_input: MovementInput,
+    pub(crate) yaw: f32,
+    pub(crate) pitch: f32,
     /// A jump press survives until a tick consumes it, so a tap shorter than
     /// one tick is never lost between render frames.
-    jump_latch: bool,
+    pub(crate) jump_latch: bool,
     /// Same for crouch: a superglide's crouch tap can be shorter than a tick.
-    crouch_latch: bool,
-    tick_rate: f64,
+    pub(crate) crouch_latch: bool,
+    pub(crate) tick_rate: f64,
     /// Scroll-wheel notches waiting to be turned into one-tick presses.
-    scroll_fwd_pending: u32,
-    scroll_jump_pending: u32,
+    pub(crate) scroll_fwd_pending: u32,
+    pub(crate) scroll_jump_pending: u32,
     /// The previous tick was a scroll pulse, so this one must be a release.
-    fwd_pulse_last: bool,
-    jump_pulse_last: bool,
-    auto_sprint: bool,
+    pub(crate) fwd_pulse_last: bool,
+    pub(crate) jump_pulse_last: bool,
+    pub(crate) auto_sprint: bool,
     /// Last lurch (strength, tick) so the HUD can show it for longer than a tick.
-    last_lurch: (f32, u64),
+    pub(crate) last_lurch: (f32, u64),
     /// Last traversal / tech event (name, tick) for the HUD.
-    last_event: (&'static str, u64),
-    recording: Option<Recording>,
-    hud_visible: bool,
+    pub(crate) last_event: (&'static str, u64),
+    /// Last landing: (vertical speed just before it, tick).
+    pub(crate) last_landing: (f32, u64),
+    pub(crate) recording: Option<Recording>,
+    pub(crate) hud_visible: bool,
 }
 
 struct Recording {
@@ -163,6 +174,7 @@ impl Sim {
             auto_sprint: true,
             last_lurch: (0.0, 0),
             last_event: ("-", 0),
+            last_landing: (0.0, 0),
             recording: None,
             hud_visible: true,
         }
@@ -170,7 +182,7 @@ impl Sim {
 }
 
 #[derive(Component)]
-struct PlayerCamera;
+pub(crate) struct PlayerCamera;
 
 #[derive(Component)]
 struct Hud;
@@ -179,8 +191,10 @@ fn setup_world(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>,
     sim: Res<Sim>,
 ) {
+    let grid = images.add(view::grid_texture());
     let palette = [
         Color::srgb(0.42, 0.44, 0.47),
         Color::srgb(0.85, 0.55, 0.30),
@@ -198,32 +212,10 @@ fn setup_world(
             Mesh3d(meshes.add(brush_mesh::brush_to_mesh(brush))),
             MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: color,
+                base_color_texture: Some(grid.clone()),
                 perceptual_roughness: 0.9,
                 ..default()
             })),
-        ));
-    }
-
-    // Floor grid every 64u so speed is visible.
-    let line = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.30, 0.31, 0.33),
-        unlit: true,
-        ..default()
-    });
-    let len = 4000.0 * UNITS_TO_METRES;
-    let strip_x = meshes.add(Cuboid::new(len, 0.002, 0.02));
-    let strip_z = meshes.add(Cuboid::new(0.02, 0.002, len));
-    for k in -31..=31 {
-        let o = k as f32 * 64.0 * UNITS_TO_METRES;
-        commands.spawn((
-            Mesh3d(strip_x.clone()),
-            MeshMaterial3d(line.clone()),
-            Transform::from_xyz(0.0, 0.001, o),
-        ));
-        commands.spawn((
-            Mesh3d(strip_z.clone()),
-            MeshMaterial3d(line.clone()),
-            Transform::from_xyz(o, 0.001, 0.0),
         ));
     }
 
@@ -234,6 +226,7 @@ fn setup_world(
             ..default()
         },
         Transform::from_xyz(10.0, 20.0, 6.0).looking_at(Vec3::ZERO, Vec3::Y),
+        bevy::camera::visibility::RenderLayers::from_layers(&[0, view::VIEW_MODEL_LAYER]),
     ));
     commands.spawn((
         DirectionalLight {
@@ -242,6 +235,7 @@ fn setup_world(
             ..default()
         },
         Transform::from_xyz(-8.0, 10.0, -12.0).looking_at(Vec3::ZERO, Vec3::Y),
+        bevy::camera::visibility::RenderLayers::from_layers(&[0, view::VIEW_MODEL_LAYER]),
     ));
 
     commands.spawn((
@@ -409,6 +403,9 @@ fn simulate(
         if let Some(e) = event {
             sim.last_event = (e, next.tick);
         }
+        if rep.landed {
+            sim.last_landing = (sim.prev.velocity.z, next.tick);
+        }
         sim.last_input = input;
         sim.jump_latch = false;
         sim.crouch_latch = false;
@@ -417,28 +414,6 @@ fn simulate(
             rec.inputs.push(input);
         }
     }
-}
-
-fn eye_height(sim: &Sim, s: &MovementState) -> f32 {
-    if s.crouched {
-        sim.cfg.crouch_eye_height
-    } else {
-        sim.cfg.stand_eye_height
-    }
-}
-
-fn place_camera(sim: Res<Sim>, mut cam: Single<&mut Transform, With<PlayerCamera>>) {
-    let a = sim.clock.alpha();
-    let eye = |s: &MovementState| s.position + apex_math::Vec3::new(0.0, 0.0, eye_height(&sim, s));
-    let pos = eye(&sim.prev).lerp(eye(&sim.cur), a);
-    cam.translation = to_bevy(pos);
-    // Source yaw 0 looks down +X (Bevy +X); Bevy cameras look down -Z.
-    cam.rotation = Quat::from_euler(
-        EulerRot::YXZ,
-        (sim.yaw - 90.0).to_radians(),
-        (-sim.pitch).to_radians(),
-        0.0,
-    );
 }
 
 fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<Hud>>) {
@@ -471,6 +446,7 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
          air {:.3}s ground {:.3}s {}\n\
          last lurch k {:.2} ({} ticks ago)   slide boost {}\n\
          always-sprint {} (F2)   scroll: up = W tap, down = jump\n\
+         F3 1st/3rd person   F4 camera feel   F6 trail\n\
          last event: {} ({} ticks ago)   sim {} Hz (--hz)\n\
          {}\n\
          [Apex S21 rules where measured; see sheets/constants.tsv]",

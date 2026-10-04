@@ -10,6 +10,9 @@ use bevy::render::mesh::{Indices, PrimitiveTopology};
 use crate::to_bevy;
 
 const EPS: f32 = 0.01;
+/// One texture tile covers this many Source units (the grid texture draws a
+/// line every 16 u and a bold one every 64 u).
+pub const UNITS_PER_TILE: f32 = 64.0;
 
 /// Corners of the brush: every point where three planes meet that lies inside all of them.
 fn corners(brush: &Brush) -> Vec<SVec3> {
@@ -41,6 +44,7 @@ pub fn brush_to_mesh(brush: &Brush) -> Mesh {
     let pts = corners(brush);
     let mut positions: Vec<[f32; 3]> = Vec::new();
     let mut normals: Vec<[f32; 3]> = Vec::new();
+    let mut uvs: Vec<[f32; 2]> = Vec::new();
     let mut indices: Vec<u32> = Vec::new();
 
     for plane in &brush.planes {
@@ -67,9 +71,20 @@ pub fn brush_to_mesh(brush: &Brush) -> Mesh {
         });
         let base = positions.len() as u32;
         let bn = to_bevy(n).normalize_or_zero().to_array();
+        // World-space UVs on the face's dominant plane, so grid lines sit at
+        // exact world coordinates: on walls they mark heights every 16/64 u.
+        let (ax, ay, az) = (n.x.abs(), n.y.abs(), n.z.abs());
         for v in &face {
             positions.push(to_bevy(*v).to_array());
             normals.push(bn);
+            let (a, b) = if az >= ax && az >= ay {
+                (v.x, v.y)
+            } else if ax >= ay {
+                (v.y, -v.z)
+            } else {
+                (v.x, -v.z)
+            };
+            uvs.push([a / UNITS_PER_TILE, b / UNITS_PER_TILE]);
         }
         for t in 1..face.len() as u32 - 1 {
             indices.extend_from_slice(&[base, base + t, base + t + 1]);
@@ -82,5 +97,6 @@ pub fn brush_to_mesh(brush: &Brush) -> Mesh {
     )
     .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normals)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
     .with_inserted_indices(Indices::U32(indices))
 }

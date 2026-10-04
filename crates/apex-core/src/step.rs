@@ -189,6 +189,7 @@ pub fn step_with_report(
             &mut s,
             &mut rep,
             wish_dir,
+            fwd,
             pre_move_h,
             allow_climb,
             cfg,

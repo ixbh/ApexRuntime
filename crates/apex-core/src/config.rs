@@ -129,6 +129,21 @@ pub struct MovementConfig {
     /// Sideways (along-the-wall) speed carried through a mantle decays at this
     /// rate unless A/D is held that way.
     pub mantle_side_decay: f32,
+    /// Sideways climb (wallrun): along-the-wall target speed with A/D, and
+    /// the (lower) one during an upward W climb; approached at `climb_side_accel`.
+    pub climb_side_speed: f32,
+    pub climb_up_side_speed: f32,
+    pub climb_side_accel: f32,
+    /// Climbing slower than `climb_nonupward_min_vz` detaches once the climb
+    /// is older than `climb_nonupward_time`.
+    pub climb_nonupward_time: f32,
+    pub climb_nonupward_min_vz: f32,
+    /// View must face the wall: forward·(−normal) at least this (45.57°).
+    pub climb_look_min_dot: f32,
+    /// Push into the wall each climb tick so the climb hugs the surface.
+    pub climb_suction: f32,
+    /// A climb becomes a mantle only with input this much into the wall (50°).
+    pub mantle_input_min_dot: f32,
 
     /// Source `sv_airaccelerate`. `[source]`
     pub air_accel: f32,
@@ -218,6 +233,14 @@ impl MovementConfig {
         wall_push_min_dot: sheet::WALL_PUSH_MIN_DOT,
         wall_push_min_speed: sheet::WALL_PUSH_MIN_SPEED,
         mantle_side_decay: sheet::MANTLE_SIDE_DECAY,
+        climb_side_speed: sheet::CLIMB_SIDE_SPEED,
+        climb_up_side_speed: sheet::CLIMB_UP_SIDE_SPEED,
+        climb_side_accel: sheet::CLIMB_SIDE_ACCEL,
+        climb_nonupward_time: sheet::CLIMB_NONUPWARD_TIME,
+        climb_nonupward_min_vz: sheet::CLIMB_NONUPWARD_MIN_VZ,
+        climb_look_min_dot: sheet::CLIMB_LOOK_MIN_DOT,
+        climb_suction: sheet::CLIMB_SUCTION,
+        mantle_input_min_dot: sheet::MANTLE_INPUT_MIN_DOT,
         air_accel: sheet::AIR_ACCEL,
         air_speed_cap: sheet::AIR_SPEED_CAP,
         step_height: sheet::STEP_HEIGHT,

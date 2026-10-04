@@ -214,6 +214,24 @@ Reaching a ledge during the climb mantles over it. Replays: 3 recorded
 climbs match every tick (81/81 within 5 u/s, worst 1.3); climbs with A held
 differ (A/D lengthen the climb and strengthen the push: not modelled).
 
+**Climb kinds by input (apexmovement.tech wiki, 2026-10-04):** the input
+relative to the wall decides the climb each tick.
+* W into the wall: the measured upward climb above; along-the-wall speed ≤ 115.
+* A/D pointing into the wall (view turned slightly away): **sideways climb /
+  wallrun**: along-the-wall speed → 258 (faster carried speed kept), falling
+  is held off and upward speed runs out under gravity, so the run stays level.
+* A/D pointing away from the wall: slip (gravity only).
+* Non-upward climbing (vz < 10) lets go 1 s after attaching.
+* Crouch, Back, or looking > 45.57° from the wall (arccos 0.7) detach; the
+  look limit also gates attaching.
+* A climb turns into a mantle only with input within 50° of the wall (else a
+  "No-ma climb"). Speed along the wall is carried into the climb and out of
+  wall jumps and the end push. The player is pushed into the wall each tick
+  (`climb_suction`) and follows the wall's surface.
+Not modelled yet: climb space / zones (baseline, mini/green/neutral zones,
+attach offset 100, cutoff 147) — wall-jump height still comes from the
+measured contact-time ramp.
+
 ### Wall jump / wall bounce
 Jump while climbing: 258 u/s along the wall normal, plus 258 along the
 wall toward the A/D input if held (bounce |h| = 365). vz: within 0.1 s of

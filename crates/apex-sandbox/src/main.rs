@@ -155,6 +155,12 @@ pub(crate) struct Sim {
     pub(crate) last_event: (&'static str, u64),
     /// Last landing: (vertical speed just before it, tick).
     pub(crate) last_landing: (f32, u64),
+    /// Current ground contact: (landing tick, speed at landing, jump was
+    /// pressed on the landing tick itself = wasted, as in Apex).
+    pub(crate) hop_land: Option<(u64, f32, bool)>,
+    /// Last bhop: (ground ticks before the jump, speed lost on the ground,
+    /// bhop penalty on the jump, wasted press on the landing tick).
+    pub(crate) last_hop: Option<(u64, f32, f32, bool)>,
     pub(crate) recording: Option<Recording>,
     pub(crate) hud_visible: bool,
 }
@@ -194,6 +200,8 @@ impl Sim {
             last_lurch: (0.0, 0),
             last_event: ("-", 0),
             last_landing: (0.0, 0),
+            hop_land: None,
+            last_hop: None,
             recording: None,
             hud_visible: true,
         }
@@ -463,6 +471,22 @@ fn simulate(
         }
         if rep.landed {
             sim.last_landing = (sim.prev.velocity.z, next.tick);
+            let wasted = input.buttons.contains(Buttons::JUMP)
+                && !sim.last_input.buttons.contains(Buttons::JUMP);
+            sim.hop_land = Some((next.tick, next.horizontal_speed(), wasted));
+        }
+        if rep.jumped && sim.prev.on_ground() {
+            if let Some((tick, land_speed, wasted)) = sim.hop_land.take() {
+                let before = sim.prev.horizontal_speed();
+                sim.last_hop = Some((
+                    next.tick - tick - 1,
+                    land_speed - before,
+                    before - next.horizontal_speed(),
+                    wasted,
+                ));
+            }
+        } else if !next.on_ground() {
+            sim.hop_land = None;
         }
         sim.last_input = input;
         sim.jump_latch = false;
@@ -507,6 +531,7 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
          always-sprint {} (F2)   scroll: up = W tap, down = jump\n\
          F3 1st/3rd person   F4 camera feel   F6 trail   F7 jump fatigue {}\n\
          last event: {} ({} ticks ago)   {}\n\
+         last hop: {}\n\
          {}\n\
          [Apex S21 rules where measured; see sheets/constants.tsv]",
         s.tick,
@@ -550,6 +575,18 @@ fn update_hud(sim: Res<Sim>, mut hud: Single<(&mut Text, &mut Visibility), With<
         },
         sim.last_event.0,
         s.tick.saturating_sub(sim.last_event.1),
+        match sim.last_hop {
+            None => "-".to_owned(),
+            Some((ticks, ground, penalty, wasted)) => format!(
+                "{ticks} ground ticks before the jump, -{ground:.1} friction/slide, \
+                 -{penalty:.1} bhop penalty{}",
+                if wasted {
+                    "  (a press ON the landing tick was too early)"
+                } else {
+                    ""
+                }
+            ),
+        },
         if sim.frame_locked {
             format!(
                 "1 tick per frame, {:.0} fps (--fps N to cap)",

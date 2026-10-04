@@ -118,6 +118,7 @@ pub fn try_start(
     s: &mut MovementState,
     rep: &mut StepReport,
     wish_dir: Vec3,
+    view_fwd: Vec3,
     pre_move_h: Vec3,
     allow_climb: bool,
     cfg: &MovementConfig,
@@ -169,6 +170,7 @@ pub fn try_start(
         && !s.crouched
         && vz_mid > 0.0
         && vz_mid <= cfg.climb_attach_vz
+        && view_fwd.dot(-n) >= cfg.climb_look_min_dot
     {
         s.climb = Some(Climb {
             normal: n,
@@ -177,7 +179,10 @@ pub fn try_start(
         });
         s.climbed_this_air = true;
         s.sliding = false;
-        s.velocity = Vec3::new(0.0, 0.0, vz_mid);
+        // Speed along the wall is carried into the climb (wiki); the part
+        // into the wall is not.
+        let along = pre_move_h - n * pre_move_h.dot(n);
+        s.velocity = along + Vec3::new(0.0, 0.0, vz_mid);
         let tr = world.trace_hull(
             s.position,
             s.position + Vec3::new(0.0, 0.0, vz_mid * dt),
@@ -421,6 +426,12 @@ pub fn mantle_tick(
 }
 
 /// One tick of an in-progress wall climb.
+///
+/// The movement input relative to the wall picks the kind of climb (wiki
+/// "Climb", "Sideways climb - Wallrun"): W climbs up (the measured S21
+/// profile), A/D pointing into the wall climbs sideways along it (a
+/// wallrun), sideways pointing away slips down. The player is held against
+/// the wall and follows its surface; speed along the wall is carried.
 #[allow(clippy::too_many_arguments)]
 pub fn climb_tick(
     s: &mut MovementState,
@@ -434,19 +445,23 @@ pub fn climb_tick(
 ) {
     let Some(mut c) = s.climb else { return };
     let n = c.normal;
+    let tangent = Vec3::new(-n.y, n.x, 0.0);
+    let along_speed = s.velocity.horizontal().dot(tangent);
+    let into = wish_dir.dot(-n);
+    let side = wish_dir.dot(tangent);
+    let (view_fwd, _) = apex_math::yaw_basis(input.yaw);
 
-    // Climb over (S21: 51 climb ticks at 60 fps, then the push on the next).
-    if c.t + 1e-4 >= cfg.climb_duration {
+    let detach = |s: &mut MovementState, c_vel: Vec3| {
         s.climb = None;
-        s.velocity = n * cfg.climb_end_push_out + Vec3::new(0.0, 0.0, cfg.climb_end_push_up);
-        rep.climb_finished = true;
-        return;
-    }
+        s.velocity = c_vel;
+        s.mode = MoveMode::Air;
+    };
 
     if pressed.contains(Buttons::JUMP) {
         // Wall jump. Early (bounce window): vz ramps 260 -> 373 with contact
         // time; later: keeps the climb speed. Push 258 off the wall, plus 258
-        // along the wall toward the A/D input (wall bounce |h| = 258·√2).
+        // along the wall toward the A/D input (wall bounce |h| = 258·√2);
+        // faster speed already along the wall (a wallrun) is kept.
         let vz = if c.t <= cfg.wall_bounce_window {
             let a = (c.t / cfg.wall_bounce_window.max(1e-6)).clamp(0.0, 1.0);
             (cfg.wall_bounce_vz_min + (cfg.wall_bounce_vz_max - cfg.wall_bounce_vz_min) * a)
@@ -458,68 +473,148 @@ pub fn climb_tick(
         };
         let mut h = n * cfg.wall_jump_push;
         if input.right != 0.0 {
-            let along = (wish_dir - n * wish_dir.dot(n)).normalize_or_zero();
-            h += along * cfg.wall_jump_push;
+            let dir = (wish_dir - n * wish_dir.dot(n)).normalize_or_zero();
+            let carried = (tangent * along_speed).dot(dir);
+            h += dir * carried.max(cfg.wall_jump_push);
+        } else {
+            h += tangent * along_speed;
         }
-        s.climb = None;
-        s.velocity = h + Vec3::new(0.0, 0.0, vz);
-        s.mode = MoveMode::Air;
+        detach(s, h + Vec3::new(0.0, 0.0, vz));
         s.air_from_jump = true;
         rep.jumped = true;
         rep.wall_jump = true;
         return;
     }
 
-    // Without W this is only wall *contact* (what wall bounces use): no
-    // climbing, and it lets go after the bounce window.
-    if input.forward <= 0.0 {
+    // Non-jump detaches (wiki): crouch, back, looking more than 45.57° away.
+    if pressed.contains(Buttons::CROUCH)
+        || input.forward < 0.0
+        || view_fwd.dot(-n) < cfg.climb_look_min_dot
+    {
+        let v = s.velocity;
+        detach(s, v);
+        return;
+    }
+
+    let climbing_up = input.forward > 0.0 && into > 0.0;
+    let sideways = !climbing_up && input.right != 0.0;
+    if !climbing_up && !sideways {
+        // No input: only wall *contact* (what wall bounces use); it lets go
+        // after the bounce window.
         if c.t > cfg.wall_bounce_window {
-            s.climb = None;
+            let v = s.velocity;
+            detach(s, v);
             return;
         }
-        let vz = s.velocity.z - cfg.gravity * dt;
-        let tr = world.trace_hull(
-            s.position,
-            s.position + Vec3::new(0.0, 0.0, vz * dt),
-            cfg.hull(s.crouched),
-        );
-        s.position = tr.end_pos;
-        s.velocity = Vec3::new(0.0, 0.0, vz);
-        c.t += dt;
-        s.climb = Some(c);
-        return;
     }
 
-    // Reached a ledge: mantle over it.
-    if let Some((end, height)) = find_ledge(world, cfg, s.position, -n, cfg.mantle_max_height) {
-        start_mantle(s, rep, end, height, -n, cfg);
-        return;
-    }
-    // Lost the wall: fall.
+    // Reached a ledge with the input pointing at it: mantle over it. A
+    // sideways climb looking past the ledge does not (wiki "No-ma climb").
     let hull = cfg.hull(s.crouched);
-    if probe_wall(world, hull, s.position, -n, cfg.wall_probe_dist).is_none() {
-        s.climb = None;
+    if into >= cfg.mantle_input_min_dot {
+        let max_h = cfg.mantle_max_height;
+        if let Some((end, height)) = find_ledge(world, cfg, s.position, -n, max_h) {
+            start_mantle(s, rep, end, height, -n, cfg);
+            return;
+        }
+    }
+
+    // Vertical speed.
+    let mut vz = s.velocity.z;
+    if climbing_up {
+        // Measured S21 W climb: 51 ticks at 60 fps, then the end push.
+        if c.t + 1e-4 >= cfg.climb_duration {
+            s.climb = None;
+            s.velocity = n * cfg.climb_end_push_out
+                + tangent * along_speed
+                + Vec3::new(0.0, 0.0, cfg.climb_end_push_up);
+            rep.climb_finished = true;
+            return;
+        }
+        if !c.peaked {
+            vz += cfg.climb_accel * dt;
+            if vz >= cfg.climb_peak_speed {
+                vz = cfg.climb_peak_speed;
+                c.peaked = true;
+            }
+        } else {
+            vz *= apex_math::exp(-cfg.climb_decay_rate * dt);
+        }
+    } else if sideways && into >= 0.0 {
+        // Wallrun: upward momentum runs out under gravity, falling is held
+        // off by the climb, so the run stays roughly level.
+        vz = if vz > 0.0 {
+            (vz - cfg.gravity * dt).max(0.0)
+        } else {
+            (vz + cfg.climb_accel * dt).min(0.0)
+        };
+    } else {
+        // Slipping (sideways input pointing away from the wall) or plain
+        // contact: gravity only.
+        vz -= cfg.gravity * dt;
+    }
+
+    // Non-upward climbing has a 1 s timer (wiki).
+    c.t += dt;
+    if c.t >= cfg.climb_nonupward_time && vz < cfg.climb_nonupward_min_vz {
+        detach(s, tangent * along_speed + Vec3::new(0.0, 0.0, vz));
         return;
     }
 
-    let mut vz = s.velocity.z;
-    if !c.peaked {
-        vz += cfg.climb_accel * dt;
-        if vz >= cfg.climb_peak_speed {
-            vz = cfg.climb_peak_speed;
-            c.peaked = true;
-        }
+    // Speed along the wall: toward the A/D input's target, faster carried
+    // speed in that direction is kept; without A/D it bleeds off.
+    let target = if sideways {
+        side.signum() * cfg.climb_side_speed
+    } else if climbing_up {
+        side * cfg.climb_up_side_speed
     } else {
-        vz *= apex_math::exp(-cfg.climb_decay_rate * dt);
+        0.0
+    };
+    let step = cfg.climb_side_accel * dt;
+    let mut along = along_speed;
+    let keeps_faster = target != 0.0 && along * target.signum() > target.abs();
+    if !keeps_faster {
+        along = if along < target {
+            (along + step).min(target)
+        } else {
+            (along - step).max(target)
+        };
     }
-    c.t += dt;
 
-    let target = s.position + Vec3::new(0.0, 0.0, vz * dt);
-    let tr = world.trace_hull(s.position, target, hull);
+    // Move along the wall (held against it), then vertically.
+    let tr = world.trace_hull(s.position, s.position + tangent * (along * dt), hull);
+    if !tr.start_solid {
+        if tr.fraction < 1.0 {
+            // Ran into something along the wall (a corner): stop there.
+            along = 0.0;
+        }
+        s.position = tr.end_pos;
+    }
+    let tr = world.trace_hull(s.position, s.position - n * (cfg.climb_suction * dt), hull);
+    if !tr.start_solid {
+        s.position = tr.end_pos;
+    }
+    let tr = world.trace_hull(s.position, s.position + Vec3::new(0.0, 0.0, vz * dt), hull);
     s.position = tr.end_pos;
     if tr.fraction < 1.0 {
         vz = 0.0;
     }
-    s.velocity = Vec3::new(0.0, 0.0, vz);
+
+    // Follow the wall's surface; off its end: let go.
+    match probe_wall(
+        world,
+        hull,
+        s.position,
+        -n,
+        cfg.wall_probe_dist + cfg.climb_suction * dt,
+    ) {
+        Some(n2) if n2.dot(n) > 0.7 => c.normal = n2,
+        _ => {
+            detach(s, tangent * along + Vec3::new(0.0, 0.0, vz));
+            return;
+        }
+    }
+
+    s.velocity = tangent * along + Vec3::new(0.0, 0.0, vz);
     s.climb = Some(c);
 }

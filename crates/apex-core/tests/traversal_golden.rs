@@ -468,3 +468,75 @@ fn wall_contact_without_w_allows_a_bounce() {
     assert!(r.wall_jump);
     assert!((s.velocity.horizontal().length() - 364.9).abs() < 1.0);
 }
+
+#[test]
+fn sideways_climb_is_a_wallrun() {
+    // Wiki "Sideways climb - Wallrun": A/D pointing slightly into the wall
+    // (view turned a little away) climbs sideways up to 258 u/s, stays on
+    // the wall for the 1 s non-upward timer, then lets go.
+    let w = world_with_block(45.0, 2000.0);
+    let cfg = MovementConfig::default();
+    let mut s = grounded_at(&w, &cfg, 0.0, 299.0);
+    s = step(
+        &s,
+        &input(1.0, 0.0, SPRINT_W | Buttons::JUMP),
+        &cfg,
+        &w,
+        DT60,
+    );
+    let d_run = MovementInput {
+        right: 1.0,
+        yaw: 10.0,
+        ..MovementInput::default()
+    };
+    let mut attach = None;
+    let mut max_along = 0.0f32;
+    let mut z_range = (f32::MAX, f32::MIN);
+    for i in 0..150 {
+        let (n, r) = step_with_report(&s, &d_run, &cfg, &w, DT60);
+        s = n;
+        if r.climb_started {
+            attach = Some(i);
+        }
+        assert!(!r.mantle_started);
+        if attach.is_some() && s.climb.is_some() {
+            max_along = max_along.max(s.velocity.horizontal().length());
+            z_range = (z_range.0.min(s.position.z), z_range.1.max(s.position.z));
+        }
+        if let Some(a) = attach
+            && s.climb.is_none()
+        {
+            let on_wall = (i - a) as f32 * DT60;
+            assert!((on_wall - 1.0).abs() < 0.05, "on the wall for {on_wall}");
+            assert!((max_along - 258.0).abs() < 1.0, "along {max_along}");
+            assert!(z_range.1 - z_range.0 < 15.0, "height range {z_range:?}");
+            assert!(
+                s.position.x > 10.0,
+                "held against the wall: x {}",
+                s.position.x
+            );
+            return;
+        }
+    }
+    panic!("no wallrun (attach {attach:?})");
+}
+
+#[test]
+fn looking_away_or_crouching_detaches_a_climb() {
+    let run = climb_run(DT60, 40);
+    let (_, s, _) = run
+        .iter()
+        .find(|(_, s, _)| s.climb.is_some())
+        .copied()
+        .expect("climbing");
+    let w = world_with_block(45.0, 2000.0);
+    let cfg = MovementConfig::default();
+    let look_away = MovementInput {
+        forward: 1.0,
+        yaw: 50.0,
+        ..MovementInput::default()
+    };
+    assert!(step(&s, &look_away, &cfg, &w, DT60).climb.is_none());
+    let crouch = input(1.0, 0.0, Buttons::CROUCH);
+    assert!(step(&s, &crouch, &cfg, &w, DT60).climb.is_none());
+}

@@ -84,6 +84,17 @@ pub fn step_with_report(
         0.0
     };
     let mut s = *state;
+    // Apex sprint semantics: auto-sprint, or a sprint press that holds until
+    // forward is released (the wiki's "Press" sprint) — not hold-to-sprint.
+    let forward = input.forward > 0.0;
+    let held = input.buttons.contains(Buttons::SPRINT);
+    s.sprint_latched = forward && (s.sprint_latched || held);
+    let mut sprint_input = *input;
+    sprint_input.buttons.set(
+        Buttons::SPRINT,
+        forward && (cfg.auto_sprint || s.sprint_latched),
+    );
+    let input = &sprint_input;
     let mut rep = StepReport {
         dt,
         entry_velocity: state.velocity,

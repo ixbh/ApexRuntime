@@ -20,6 +20,9 @@ pub struct MovementConfig {
     pub jump_height: f32,
     /// Hold jump to re-jump on landing. Apex: no. Kept for experiments.
     pub auto_jump: bool,
+    /// Always sprint when moving forward (Apex "Auto-Sprint"); otherwise a
+    /// sprint press latches sprint until forward is released (Apex "Press").
+    pub auto_sprint: bool,
 
     /// u/s. Measured.
     pub run_speed: f32,
@@ -219,6 +222,7 @@ impl MovementConfig {
         gravity: sheet::GRAVITY,
         jump_height: sheet::JUMP_HEIGHT,
         auto_jump: sheet::AUTO_JUMP,
+        auto_sprint: sheet::AUTO_SPRINT,
         run_speed: sheet::RUN_SPEED,
         sprint_speed: sheet::SPRINT_SPEED,
         crouch_speed: sheet::CROUCH_SPEED,

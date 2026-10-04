@@ -408,3 +408,57 @@ fn render_frame_rate_does_not_change_simulation() {
     assert_eq!(a.tick, b.tick);
     assert_eq!(a, b);
 }
+
+#[test]
+fn apex_sprint_press_latches_and_auto_sprint() {
+    // Wiki "Sprint": a press latches sprint until forward is released; with
+    // auto-sprint, forward alone sprints.
+    let w = flat();
+    let mut cfg = MovementConfig::default();
+    let run = |cfg: &MovementConfig, presses: &[(usize, Buttons, f32)]| {
+        let mut s = settled(&w, cfg, Vec3::ZERO);
+        for &(ticks, b, fwd) in presses {
+            for _ in 0..ticks {
+                s = step(
+                    &s,
+                    &MovementInput {
+                        forward: fwd,
+                        buttons: b,
+                        ..MovementInput::default()
+                    },
+                    cfg,
+                    &w,
+                    DT,
+                );
+            }
+        }
+        s.horizontal_speed()
+    };
+    // Tap sprint once, then just W for 3 s: still sprinting.
+    let tapped = run(
+        &cfg,
+        &[(1, Buttons::SPRINT, 1.0), (180, Buttons::NONE, 1.0)],
+    );
+    assert!(
+        (tapped - cfg.sprint_speed).abs() < 1.0,
+        "latched sprint {tapped}"
+    );
+    // Release forward: the latch drops; W again runs.
+    let dropped = run(
+        &cfg,
+        &[
+            (1, Buttons::SPRINT, 1.0),
+            (60, Buttons::NONE, 1.0),
+            (30, Buttons::NONE, 0.0),
+            (180, Buttons::NONE, 1.0),
+        ],
+    );
+    assert!(
+        (dropped - cfg.run_speed).abs() < 1.0,
+        "latch dropped {dropped}"
+    );
+    // Auto-sprint: W alone sprints.
+    cfg.auto_sprint = true;
+    let auto = run(&cfg, &[(180, Buttons::NONE, 1.0)]);
+    assert!((auto - cfg.sprint_speed).abs() < 1.0, "auto sprint {auto}");
+}

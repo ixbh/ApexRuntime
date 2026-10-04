@@ -125,6 +125,8 @@ pub struct MovementState {
     pub slide_boost_given: f32,
     /// Fall stun after a hard landing: (seconds since landing, strength 0..1).
     pub fall_stun: Option<(f32, f32)>,
+    /// Apex "press" sprint: a sprint press holds until forward is released.
+    pub sprint_latched: bool,
 }
 
 /// Coyote-time bookkeeping (see `MovementState::coyote`).

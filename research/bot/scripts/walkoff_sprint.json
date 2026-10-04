@@ -1,0 +1,21 @@
+{
+ "name": "walkoff_sprint",
+ "sens": 1.63,
+ "countdown_s": 5,
+ "gap_ms": 200,
+ "attempts": [
+  {
+   "label": "sprint off the edge, keep running after landing",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 6000,
+     "up": "w"
+    }
+   ]
+  }
+ ]
+}

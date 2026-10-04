@@ -1,0 +1,50 @@
+{
+ "name": "slope",
+ "sens": 1.63,
+ "countdown_s": 5,
+ "gap_ms": 200,
+ "attempts": [
+  {
+   "label": "slide down, slide up, stand",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 1000,
+     "down": "c"
+    },
+    {
+     "at_ms": 3500,
+     "up": "c"
+    },
+    {
+     "at_ms": 3600,
+     "up": "w"
+    },
+    {
+     "at_ms": 3800,
+     "turn_right_deg": 180.0,
+     "over_ms": 300
+    },
+    {
+     "at_ms": 4300,
+     "down": "w"
+    },
+    {
+     "at_ms": 5500,
+     "down": "c"
+    },
+    {
+     "at_ms": 7000,
+     "up": "c"
+    },
+    {
+     "at_ms": 7100,
+     "up": "w"
+    }
+   ]
+  }
+ ]
+}

@@ -73,7 +73,49 @@ def lurch_angles():
     return {"name": "lurch_angles", "sens": SENS, "countdown_s": 5, "gap_ms": 900, "attempts": attempts}
 
 
-for script in (deadslide(), lurch_angles()):
+def walkoff():
+    """ONE attempt per run (you reposition by zipline between runs). Stand 2-3
+    steps from an edge facing off it: sprint off and keep holding W after
+    landing for 3 s, so the fall stun's slowdown and recovery are logged."""
+    return {"name": "walkoff_sprint", "sens": SENS, "countdown_s": 5, "gap_ms": 200, "attempts": [{
+        "label": "sprint off the edge, keep running after landing",
+        "steps": [{"at_ms": 0, "down": "w"}, {"at_ms": 6000, "up": "w"}],
+    }]}
+
+
+def walkoff_slide():
+    """Same, but slide off the edge (wiki: landing in a slide changes the stun)."""
+    return {"name": "walkoff_slide", "sens": SENS, "countdown_s": 5, "gap_ms": 200, "attempts": [{
+        "label": "slide off the edge, keep the slide, then run",
+        "steps": [
+            {"at_ms": 0, "down": "w"},
+            {"at_ms": 700, "down": CROUCH},
+            {"at_ms": 3500, "up": CROUCH},
+            {"at_ms": 6000, "up": "w"},
+        ],
+    }]}
+
+
+def slope():
+    """ONE run per start: stand at the top of a slope facing straight down.
+    Slide down, turn around, sprint + slide back up, then stand still."""
+    return {"name": "slope", "sens": SENS, "countdown_s": 5, "gap_ms": 200, "attempts": [{
+        "label": "slide down, slide up, stand",
+        "steps": [
+            {"at_ms": 0, "down": "w"},
+            {"at_ms": 1000, "down": CROUCH},
+            {"at_ms": 3500, "up": CROUCH},
+            {"at_ms": 3600, "up": "w"},
+            {"at_ms": 3800, "turn_right_deg": 180.0, "over_ms": 300},
+            {"at_ms": 4300, "down": "w"},
+            {"at_ms": 5500, "down": CROUCH},
+            {"at_ms": 7000, "up": CROUCH},
+            {"at_ms": 7100, "up": "w"},
+        ],
+    }]}
+
+
+for script in (deadslide(), lurch_angles(), walkoff(), walkoff_slide(), slope()):
     path = os.path.join(OUT, script["name"] + ".json")
     json.dump(script, open(path, "w"), indent=1)
     print(f"{path}: {len(script['attempts'])} attempts")

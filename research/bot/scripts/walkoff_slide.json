@@ -1,0 +1,29 @@
+{
+ "name": "walkoff_slide",
+ "sens": 1.63,
+ "countdown_s": 5,
+ "gap_ms": 200,
+ "attempts": [
+  {
+   "label": "slide off the edge, keep the slide, then run",
+   "steps": [
+    {
+     "at_ms": 0,
+     "down": "w"
+    },
+    {
+     "at_ms": 700,
+     "down": "c"
+    },
+    {
+     "at_ms": 3500,
+     "up": "c"
+    },
+    {
+     "at_ms": 6000,
+     "up": "w"
+    }
+   ]
+  }
+ ]
+}

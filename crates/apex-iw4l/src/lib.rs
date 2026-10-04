@@ -133,7 +133,9 @@ pub fn sync_to_playerstate(ms: &MovementState, cfg: &MovementConfig, ps: &mut Pl
     };
     set(&mut ps.pm_flags, pm_flags::CROUCH, ms.crouched);
     set(&mut ps.pm_flags, pm_flags::PRONE, false);
-    set(&mut ps.pm_flags, pm_flags::MANTLE, ms.mantle.is_some());
+    // IW4's MANTLE flag means "IW4 mantle state is valid" to its animation
+    // code; Apex mantles do not fill that state, so the flag stays off.
+    set(&mut ps.pm_flags, pm_flags::MANTLE, false);
     let eye =
         cfg.stand_eye_height + (cfg.crouch_eye_height - cfg.stand_eye_height) * ms.crouch_frac;
     ps.view_height_target = eye.round() as i32;

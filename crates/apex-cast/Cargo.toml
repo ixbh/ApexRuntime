@@ -1,0 +1,12 @@
+[package]
+name = "apex-cast"
+description = "Reads Cast model/animation files (open format, github.com/dtzxporter/cast): skeletons, skinned meshes, materials, animation sampling and CPU skinning. Engine-free."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true

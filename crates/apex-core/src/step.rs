@@ -121,6 +121,15 @@ pub fn step_with_report(
         let mut launch = cfg.jump_speed(cfg.jump_height * frac);
         if s.sliding {
             launch *= cfg.slide_jump_mult;
+            // Slide long jump: an unfatigued slide-jump is at least 350 u/s
+            // horizontally (S21 traces: 316..335 -> 350.0; faster is kept).
+            let h = s.velocity.horizontal();
+            let speed = h.length();
+            if frac >= 1.0 && speed > 1e-3 && speed < cfg.slide_jump_min_speed {
+                let k = cfg.slide_jump_min_speed / speed;
+                s.velocity.x *= k;
+                s.velocity.y *= k;
+            }
         }
         s.velocity.z = launch - 0.5 * cfg.gravity * dt;
         s.air_from_jump = true;
@@ -319,9 +328,9 @@ fn lurch(
 }
 
 /// Slide entry/exit (ground only). Entry: crouch held, newly pressed or just
-/// landed, at or above `slide_start_min_speed`. Off cooldown, the slide adds
-/// `slide_boost` up to `slide_boost_cap` (never reduces speed). Exit: crouch
-/// released or speed below `slide_end_speed`.
+/// landed, at or above `slide_start_min_speed`. A slide started from a sprint
+/// on the ground, off cooldown, adds `slide_boost` up to `slide_boost_cap`
+/// (never reduces speed). Exit: crouch released or speed below `slide_end_speed`.
 fn update_slide(
     s: &mut MovementState,
     rep: &mut StepReport,
@@ -344,7 +353,11 @@ fn update_slide(
         s.sliding = true;
         s.crouched = true;
         rep.slide_started = true;
-        if s.time_since_slide_boost >= cfg.slide_boost_cooldown {
+        // Boost only for slides started from a sprint on the ground (re-slides
+        // on landing are not boosted: 156 of 168 in the S21 traces).
+        let sprinting =
+            was_on_ground && input.buttons.contains(Buttons::SPRINT) && input.forward > 0.0;
+        if sprinting && s.time_since_slide_boost >= cfg.slide_boost_cooldown {
             let boosted = (speed + cfg.slide_boost)
                 .min(cfg.slide_boost_cap)
                 .max(speed);

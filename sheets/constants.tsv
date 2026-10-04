@@ -31,7 +31,7 @@ crouch_in_time	f32	0.383	s	measured	medium	S21	yes	Flowstate S21 client MOVE-TRA
 crouch_out_time	f32	0.217	s	measured	medium	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	duck state 3->0 in 13 ticks
 slide_boost	f32	174.4	u/s	measured	high	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	added on slide start; 5 uncapped samples
 slide_boost_cap	f32	460	u/s	measured	high	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	boosted speed capped at 460
-slide_boost_cooldown	f32	2.4	s	measured	low	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	no boost at 2.17 s, boost at 2.57 s since previous slide start
+slide_boost_cooldown	f32	2.0	s	measured	low	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	sprint-started slides boosted at gaps >= 2.12 s (all 48); true cooldown <= 2.12, lower bound unknown. Boost ALSO requires sprinting on the ground at slide start: landing re-slides get no boost (156/168)
 slide_decel_const	f32	98.9	u/s^2	measured	medium	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	robust fit decel=c+k*v, exact per-tick dt, flat, no keys: n=736 over sessions 1-3, resid sd 8.3 u/s^2
 slide_decel_linear	f32	0.3556	1/s	measured	medium	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	see slide_decel_const
 slide_end_speed	f32	125	u/s	measured	high	S21	yes	Flowstate S21 client MOVE-TRACE session1 2026-10-02	slide continues at tick-start speed >=125.04, ends at <=124.45 (6 events, crouch held)
@@ -53,7 +53,7 @@ slide_jump_mult	f32	0.9439	-	measured	high	S21	yes	Flowstate S21 MOVE-TRACE sess
 mantle_duration_base	f32	0.22	s	measured	medium	S21	no	Flowstate S21 MOVE-TRACE sessions 1-4 (2026-10-02/03)	mantle (log gap) duration ~ 0.22 + 0.006*height for 45-78 u ledges; forward travel 18-22 u
 mantle_duration_per_unit	f32	0.006	s/u	measured	medium	S21	no	Flowstate S21 MOVE-TRACE sessions 1-4 (2026-10-02/03)	see mantle_duration_base
 mantle_exit	f32	0	u/s	measured	medium	S21	no	Flowstate S21 MOVE-TRACE sessions 1-4 (2026-10-02/03)	not a number: exit = current max speed (199.5/299) if W held, else 0; jump during mantle = normal jump V 289.8 with |h| 199.5 or 229.5
-superglide_exit_h	f32	388.7	u/s	measured	low	S21	no	Flowstate S21 MOVE-TRACE sessions 1-4 (2026-10-02/03)	one clear superglide (MB state 4): exit |h| 388.7, vz 367.4. Press timing not logged (bridge_mantle_boost_*_log printed nothing)
+mantle_boost_exit_h	f32	388.7	u/s	measured	medium	S21	no	Flowstate S21 MOVE-TRACE sessions 1-4 (2026-10-02/03)	MANTLE BOOST (S21 one-key, lax timing, MB log state=4): exit |h| 388.7 = 299 x 1.3, vz 367.4 = sqrt(2*750*90) -> 90 u jump height. 1 sample (session 4, 60 fps)
 climb_attach_vz	f32	89.6	u/s	measured	high	S21	no	Flowstate S21 MOVE-TRACE sessions 1-4 (2026-10-02/03)	wall climb attaches 0.267 s after takeoff (13 climbs) = when a full jump has slowed to ~89.6 u/s
 climb_peak_speed	f32	182.5	u/s	measured	high	S21	no	Flowstate S21 MOVE-TRACE sessions 1-4 (2026-10-02/03)	climb vz rises ~505 u/s^2 to 182.5 in 0.184 s
 climb_decay	f32	0.0288	1/tick@60	measured	high	S21	no	Flowstate S21 MOVE-TRACE sessions 1-4 (2026-10-02/03)	after the peak vz loses 2.88%/tick (~1.73/s exponential)
@@ -61,3 +61,8 @@ climb_duration	f32	0.833	s	measured	high	S21	no	Flowstate S21 MOVE-TRACE session
 climb_end_push	f32	255.5	u/s	measured	high	S21	no	Flowstate S21 MOVE-TRACE sessions 1-4 (2026-10-02/03)	end of climb: vz 255.5 up, |h| 61.7 away (A held: 101-120)
 wall_jump_push	f32	258	u/s	measured	high	S21	no	Flowstate S21 MOVE-TRACE sessions 1-4 (2026-10-02/03)	jump off mid-climb: |h| 258.0 away from the wall, vz = current climb speed
 wall_bounce_seen	f32	380	u/s	measured	low	S21	no	Flowstate S21 MOVE-TRACE sessions 1-4 (2026-10-02/03)	two free-play wall bounces: vz 361-380, |h| 328-365 after 0.1-0.15 s wall contact with A held; needs a dedicated test
+slide_jump_min_speed	f32	350	u/s	measured	high	S21	yes	Flowstate S21 MOVE-TRACE sessions 4-5 (2026-10-03)	unfatigued jump out of a slide raises |h| to at least 350 (316/319/326/331/335 -> 350.0, 381 kept); fatigued slide-jumps unchanged (S21 m_slideLongJumpAllowed)
+superglide_exit_h	f32	460	u/s	measured	high	S21	no	Flowstate S21 MOVE-TRACE sessions 4-5 (2026-10-03)	CLASSIC superglide (jump then crouch at the mantle end, ~last 1-3 ticks at 165 fps): exit |h| 460.0 = 299 + slide boost (cap 460), vz = fresh jump; tap-strafeable. 7 samples, no MB log
+wall_bounce_h	f32	365	u/s	measured	high	S21	no	Flowstate S21 MOVE-TRACE sessions 4-5 (2026-10-03)	5 wall bounces: |h| 353.9-365.3 = 258 x sqrt(2) (wall push out + 258 along the A/D input)
+wall_bounce_vz_max	f32	373	u/s	measured	medium	S21	no	Flowstate S21 MOVE-TRACE sessions 4-5 (2026-10-03)	bounce vz grows with wall-contact time before the jump: 0.005 s 260, 0.06-0.08 s 332-340, ~0.1 s 371-374
+slide_ground_cap_400	f32	400	u/s	measured	low	S21	no	Flowstate S21 MOVE-TRACE sessions 4-5 (2026-10-03)	sliding on the ground (slopes) clamps 401.5/403 -> 400.0; also 351-354 -> 350.0 seen. Slopes not modelled

@@ -76,6 +76,8 @@ pub struct MovementConfig {
     pub jump_fatigue_end: f32,
     /// Launch-speed multiplier for jumps out of a slide.
     pub slide_jump_mult: f32,
+    /// An unfatigued jump out of a slide raises horizontal speed to at least this.
+    pub slide_jump_min_speed: f32,
 
     /// Source `sv_airaccelerate`. `[source]`
     pub air_accel: f32,
@@ -135,6 +137,7 @@ impl MovementConfig {
         jump_fatigue_start: sheet::JUMP_FATIGUE_START,
         jump_fatigue_end: sheet::JUMP_FATIGUE_END,
         slide_jump_mult: sheet::SLIDE_JUMP_MULT,
+        slide_jump_min_speed: sheet::SLIDE_JUMP_MIN_SPEED,
         air_accel: sheet::AIR_ACCEL,
         air_speed_cap: sheet::AIR_SPEED_CAP,
         step_height: sheet::STEP_HEIGHT,

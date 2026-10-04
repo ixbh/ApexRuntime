@@ -100,6 +100,29 @@ Same match, logs rotate at 10 MB (keep copies: `traces/raw/`).
   air speeds of exactly 350.0 / 400.0) appear only in slide/crouch combos:
   unresolved.
 
+## Session 5 (2026-10-03, 165 fps): superglide, wall bounce, slide-jump
+
+- **Two different mechanics** (player's insight, confirmed by the data):
+  *classic superglide* = jump then crouch in the last ~1-3 ticks of a mantle
+  -> a slide-jump at the mantle exit: |h| 460.0 (299 + slide boost, capped),
+  fresh jump vz; tap-strafeable. 7 samples, no `[MB]` log. *Mantle boost*
+  (S21, one key, lax timing): |h| 388.7 (= 299 x 1.3), vz 367.4 (90 u
+  jump); logged by `[MB] FIRST FIRE ... state=4`. 1 sample.
+- Superglide timing measured from the mantle log gap: press at ~93-97 % of
+  the mantle duration; earlier presses jump off (vz 287.6, |h| 0-188), later
+  ones finish the mantle normally. The `bridge_mantle_boost_*_log` cvars
+  printed nothing on client or server in this build.
+- **Wall bounce** (5): |h| 354-365 = 258 x sqrt(2) (wall push + 258 along the
+  A/D input); vz grows with wall contact time before the jump (0.005 s: 260,
+  0.06-0.08 s: 332-340, 0.1 s: 371-374).
+- **Slide long jump**: an unfatigued slide-jump raises |h| to >= 350
+  (implemented). **Slide boost needs a sprint start on the ground**: 48/49
+  sprint slides boosted, landing re-slides 12/168 (implemented); cooldown
+  <= 2.12 s.
+- Unresolved: landing 354 -> 299.0 on one slide-jump landing (others keep
+  sliding); ground slide clamps to 400.0/350.0 on slopes (slopes not
+  modelled).
+
 ## Still to measure
 
 lurch (clean A/D taps at fixed times after takeoff; exact window and

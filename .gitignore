@@ -51,3 +51,13 @@ traces/*.json
 *.swp
 Thumbs.db
 .DS_Store
+
+# Personal Apex content (own install / downloads): never committed. Lives in F:\ApexContent.
+ApexContent/
+*.gltf
+*.glb
+*.fbx
+*.blend
+*.rpak
+*.starpak
+*.mbnk

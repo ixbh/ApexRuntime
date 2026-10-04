@@ -661,3 +661,88 @@ fn fall_stun_matches_walkoffs() {
     let (s, r) = step_with_report(&s, &run, &cfg, &w, dt);
     assert!(r.landed && s.fall_stun.is_none() && s.horizontal_speed() > 270.0);
 }
+
+/// A 31° ramp rising along +X from x = 0 (plus a floor).
+fn ramp31() -> BrushWorld {
+    let mut w = flat();
+    let run = 2000.0;
+    let rise = run * 31.0f32.to_radians().tan();
+    w.add(Brush::ramp_x(
+        Vec3::new(0.0, -2000.0, 0.0),
+        Vec3::new(run, 2000.0, rise),
+    ));
+    w
+}
+
+fn slide_on(w: &BrushWorld, x: f32, vx: f32, crouch: bool, ticks: usize) -> (f32, f32) {
+    let cfg = MovementConfig::default();
+    let dt = 1.0 / 165.0;
+    // The hull's front edge (x + 16) touches the ramp first.
+    let z = (x + 16.0) * 31.0f32.to_radians().tan() + 1.0;
+    let mut s = MovementState::at(Vec3::new(x, 0.0, z));
+    settle(&mut s, &cfg, w);
+    s.velocity = Vec3::new(vx, 0.0, 0.0);
+    s.sliding = true;
+    s.crouched = true;
+    s.crouch_frac = 1.0;
+    s.slide_t = 1.0;
+    let b = if crouch {
+        Buttons::CROUCH
+    } else {
+        Buttons::NONE
+    };
+    let before = s.horizontal_speed();
+    for _ in 0..ticks {
+        s = step(&s, &input(0.0, 0.0, b), &cfg, w, dt);
+    }
+    assert!(s.sliding, "still sliding");
+    (
+        before,
+        (s.horizontal_speed() - before) / (ticks as f32 * dt),
+    )
+}
+
+#[test]
+fn slides_feel_the_slope() {
+    // Session 8 (bot, ~31° ramp): uphill at ~400 the slide loses 577 u/s²
+    // (flat decel 241 + slope 332); downhill at ~500-560 it still gains
+    // +21..+45 u/s² (slope 332 beats the flat decel).
+    let w = ramp31();
+    let (_, up) = slide_on(&w, 500.0, 400.0, true, 12);
+    assert!((up + 577.0).abs() < 40.0, "uphill {up}");
+    let (_, down) = slide_on(&w, 1500.0, -520.0, true, 12);
+    assert!((15.0..=60.0).contains(&down), "downhill {down}");
+}
+
+#[test]
+fn releasing_crouch_keeps_a_fast_slide_until_350() {
+    // Sessions 2/7/8: crouch released above 350 keeps sliding with +310 u/s²
+    // more decel and stands up at 347-350.
+    let w = flat();
+    let cfg = MovementConfig::default();
+    let dt = 1.0 / 165.0;
+    let mut s = grounded(&w, &cfg, Vec3::new(400.0, 0.0, 0.0));
+    s.sliding = true;
+    s.crouched = true;
+    s.crouch_frac = 1.0;
+    s.slide_t = 1.0;
+    let mut last = 400.0;
+    let mut stood_at = None;
+    for _ in 0..200 {
+        let before = s.horizontal_speed();
+        s = step(&s, &input(0.0, 0.0, Buttons::NONE), &cfg, &w, dt);
+        if !s.sliding {
+            stood_at = Some(before);
+            break;
+        }
+        let decel = (before - s.horizontal_speed()) / dt;
+        let want = 98.9 + 0.3556 * before + 310.0;
+        assert!((decel - want).abs() < 5.0, "decel {decel} vs {want}");
+        last = s.horizontal_speed();
+    }
+    let v = stood_at.expect("stands up");
+    assert!(
+        (340.0..=351.0).contains(&v),
+        "stood up at {v} (last slide speed {last})"
+    );
+}

@@ -186,6 +186,28 @@ First automated capture (`docs/INPUTBOT.md`; attempt times in
   absorbed the first decel tick.
 - Bot runs were at 260 u/s: sprint with a weapon out (wiki: 260 unholstered, 299 holstered).
 
+## Session 8 (2026-10-04, 165 fps, apex-inputbot): fall stun, slopes
+
+Bot walk-offs (8 sprint + 3 slide, ~1186 u; 3 more ~450 u) and 6 slope runs
+on a ~31° ramp. Analysis: `research/analysis/s8_falls.py`, `s8_slope.py`.
+- **Fall stun**: strength from the landing speed into the ground as an
+  equivalent fall height, 0 at 300 u, 1 at 800 u (wiki). Landing clamps
+  horizontal speed to the stunned max (full: 300 -> 0). Max speed x
+  (1 - s(1 - t²)): full stun 0.48 s -> 0.24, 0.97 s -> 0.94 (fit exponent
+  1.94); snaps back at 0.994 s; a 0.276 stun started at 0.72 (measured 0.72)
+  and ended at 0.55 s (sqrt(s) = 0.53). Walk base until the factor reaches
+  ~0.72, then sprint. Slide-off landings use crouch speed as the base. Two
+  slope landings at ~450 u: no stun (the wiki's slope cancel).
+- **Slopes**: running/sprinting accelerates exactly as on flat ground; vz is
+  0 on the ground (horizontal velocity is what's kept). Slides add gravity's
+  horizontal pull along the slope g·n.z·n_h (31°: 332 u/s²): downhill
+  +21..+45/s at 500-560, uphill -577/s at ~400 (predicted -573).
+- **Slide release**: letting go of crouch above 350 keeps the slide going
+  with +310 u/s² decel (n 123, sd 14) until 347-350, then you stand (every
+  release in sessions 2, 7 and 8). This was the old "350 clamp" puzzle.
+- Ground move fixed to follow the slope plane: a horizontal move clipped
+  into a 31° ramp used to lose ~25 % speed and launch you (vz > 140).
+
 ## Still to measure
 
 lurch (clean A/D taps at fixed times after takeoff; exact window and

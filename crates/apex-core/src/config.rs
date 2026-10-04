@@ -95,6 +95,12 @@ pub struct MovementConfig {
     pub fall_stun_duration: f32,
     /// Sprint is allowed again once the stun factor reaches this.
     pub fall_stun_sprint_factor: f32,
+    /// Releasing crouch only ends a slide at or below this speed; above it
+    /// the slide goes on with `slide_release_extra_decel` more decel.
+    pub slide_stand_max_speed: f32,
+    pub slide_release_extra_decel: f32,
+    /// Slides get gravity's pull along the slope.
+    pub slide_slope_gravity: bool,
     pub bhop_speed_penalty: f32,
 
     /// Mantle: duration = base + per_unit × ledge height above the feet.
@@ -249,6 +255,9 @@ impl MovementConfig {
         fall_stun_full_height: sheet::FALL_STUN_FULL_HEIGHT,
         fall_stun_duration: sheet::FALL_STUN_DURATION,
         fall_stun_sprint_factor: sheet::FALL_STUN_SPRINT_FACTOR,
+        slide_stand_max_speed: sheet::SLIDE_STAND_MAX_SPEED,
+        slide_release_extra_decel: sheet::SLIDE_RELEASE_EXTRA_DECEL,
+        slide_slope_gravity: sheet::SLIDE_SLOPE_GRAVITY,
         bhop_speed_penalty: sheet::BHOP_SPEED_PENALTY,
         mantle_duration_base: sheet::MANTLE_DURATION_BASE,
         mantle_duration_per_unit: sheet::MANTLE_DURATION_PER_UNIT,

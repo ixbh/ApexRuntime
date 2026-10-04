@@ -254,16 +254,41 @@ pub fn step_with_report(
         s.velocity.z = 0.0;
         let speed = s.velocity.length();
         if speed > 0.0 {
-            let decel = (cfg.slide_decel_const + cfg.slide_decel_linear * speed) * dt;
+            // Crouch released above the stand-up speed: the slide goes on with
+            // more decel (S21: +310 u/s², ends at 347-350).
+            let released = !input.buttons.contains(Buttons::CROUCH);
+            let extra = if released {
+                cfg.slide_release_extra_decel
+            } else {
+                0.0
+            };
+            let decel = (cfg.slide_decel_const + cfg.slide_decel_linear * speed + extra) * dt;
             let new_speed = (speed - decel).max(0.0);
             s.velocity *= new_speed / speed;
             rep.friction_drop = speed - new_speed;
         }
+        if cfg.slide_slope_gravity {
+            // Gravity's pull along the slope, horizontal part: g·n.z·n_h
+            // (31° ramp: 332 u/s²; S21 downhill +21..+45/s at 500-560,
+            // uphill -577/s at 400 vs -573 predicted). It also steers the
+            // slide downhill.
+            let n = s.ground_normal;
+            s.velocity.x += cfg.gravity * n.z * n.x * dt;
+            s.velocity.y += cfg.gravity * n.z * n.y * dt;
+        }
         clamp_velocity(&mut s.velocity, cfg);
 
-        let moved = step_slide_move(world, hull, cfg, s.position, s.velocity, dt);
+        let moved = ground_move(
+            world,
+            hull,
+            cfg,
+            s.position,
+            s.velocity,
+            s.ground_normal,
+            dt,
+        );
         s.position = stay_on_ground(world, hull, cfg, moved.position);
-        s.velocity = moved.velocity;
+        s.velocity = moved.velocity.horizontal();
         rep.hit_wall = moved.hit_wall;
         rep.wall_normal = moved.wall_normal;
     } else if s.on_ground() {
@@ -282,9 +307,17 @@ pub fn step_with_report(
         s.velocity.z = 0.0;
         clamp_velocity(&mut s.velocity, cfg);
 
-        let moved = step_slide_move(world, hull, cfg, s.position, s.velocity, dt);
+        let moved = ground_move(
+            world,
+            hull,
+            cfg,
+            s.position,
+            s.velocity,
+            s.ground_normal,
+            dt,
+        );
         s.position = stay_on_ground(world, hull, cfg, moved.position);
-        s.velocity = moved.velocity;
+        s.velocity = moved.velocity.horizontal();
         rep.hit_wall = moved.hit_wall;
         rep.wall_normal = moved.wall_normal;
     } else {
@@ -439,6 +472,30 @@ pub fn fall_stun_factor(stun: Option<(f32, f32)>, cfg: &MovementConfig) -> f32 {
     }
 }
 
+/// Ground move that keeps the horizontal velocity on slopes: the move runs
+/// along the ground plane (vertical part chosen so the velocity lies in it)
+/// and the stored velocity stays horizontal. S21 (session 8, 31° ramp): vz
+/// is logged 0 on slopes and sprinting/sliding up or down accelerates exactly
+/// like on flat ground; a plain horizontal move clipped into the ramp lost
+/// ~25 % of the speed and its upward clip velocity (> 140) left the ground.
+fn ground_move(
+    world: &impl CollisionWorld,
+    hull: apex_math::Aabb,
+    cfg: &MovementConfig,
+    pos: Vec3,
+    velocity: Vec3,
+    n: Vec3,
+    dt: f32,
+) -> crate::collide::SlideResult {
+    let h = velocity.horizontal();
+    let along = if n.z > 0.0 {
+        Vec3::new(h.x, h.y, -(n.x * h.x + n.y * h.y) / n.z)
+    } else {
+        h
+    };
+    step_slide_move(world, hull, cfg, pos, along, dt)
+}
+
 /// Ground friction (Source `Friction`). Returns the speed removed.
 pub fn apply_friction(velocity: &mut Vec3, cfg: &MovementConfig, dt: f32) -> f32 {
     let speed = velocity.length();
@@ -591,7 +648,9 @@ fn update_slide(
             s.time_since_slide_boost = 0.0;
             rep.slide_boosted = true;
         }
-    } else if s.sliding && (!held || speed < cfg.slide_end_speed) {
+    } else if s.sliding
+        && ((!held && speed <= cfg.slide_stand_max_speed) || speed < cfg.slide_end_speed)
+    {
         s.sliding = false;
     }
 }
@@ -709,7 +768,9 @@ fn update_crouch(
     world: &impl CollisionWorld,
     dt: f32,
 ) {
-    let want = input.buttons.contains(Buttons::CROUCH);
+    // A slide keeps the crouched hull even after crouch is released (it goes
+    // on until the stand-up speed).
+    let want = input.buttons.contains(Buttons::CROUCH) || (s.sliding && s.on_ground());
     let diff = cfg.stand_hull.maxs.z - cfg.crouch_hull.maxs.z;
     if !s.on_ground() {
         if want && !s.crouched {

@@ -38,6 +38,10 @@ pub struct ViewState {
     trail_points: VecDeque<Vec3>,
     last_landing_tick: u64,
     eye_frac: f32,
+    /// Camera-only mantle smoothing: offset from the hull eye that decays
+    /// after the mantle ends, and the last mantle camera position.
+    mantle_cam_offset: Vec3,
+    last_mantle_cam: Option<Vec3>,
 }
 
 impl Default for ViewState {
@@ -53,6 +57,8 @@ impl Default for ViewState {
             trail_points: VecDeque::new(),
             last_landing_tick: 0,
             eye_frac: 0.0,
+            mantle_cam_offset: Vec3::ZERO,
+            last_mantle_cam: None,
         }
     }
 }
@@ -310,8 +316,43 @@ pub fn place_camera(
     let feet = feet(&sim);
     let eye_units =
         feet + apex_math::Vec3::new(0.0, 0.0, eye_height(&sim, view.eye_frac) + bob + view.dip);
-    let eye = to_bevy(eye_units);
-    let rot = view_rotation(sim.yaw, sim.pitch, if view.feel { view.roll } else { 0.0 });
+    let mut eye = to_bevy(eye_units);
+    let mut pitch = sim.pitch;
+
+    // Mantle camera (presentation only, physics untouched): the recorded hull
+    // barely moves forward during a mantle and exits at full speed; Apex hides
+    // that with an animated traversal camera. Lead the view over the ledge on
+    // a smooth arc, dip it toward the ledge, then ease into the normal view.
+    if let Some(m) = s.mantle {
+        let u = if m.duration > 0.0 {
+            (m.t / m.duration).clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
+        let smooth = |x: f32| x * x * (3.0 - 2.0 * x);
+        let hull_over = smooth(((u - 0.2) / 0.8).clamp(0.0, 1.0));
+        let lead = smooth(u);
+        let span_h = (m.end - m.start).horizontal();
+        // With W held the exit is at full speed: let the camera get a head
+        // start in the last part, so the exit reads as acceleration, not a jolt.
+        let head_start = if sim.last_input.forward > 0.0 {
+            12.0
+        } else {
+            0.0
+        };
+        let late = smooth(((u - 0.55) / 0.45).clamp(0.0, 1.0));
+        let ahead = span_h * (lead - hull_over) + m.dir * (head_start * late);
+        eye += to_bevy(ahead) - to_bevy(apex_math::Vec3::ZERO);
+        pitch += 7.0 * (PI * u).sin();
+        view.last_mantle_cam = Some(eye);
+    } else if let Some(last) = view.last_mantle_cam.take() {
+        view.mantle_cam_offset = last - eye;
+    }
+    view.mantle_cam_offset *= (-dt / 0.12).exp();
+    if s.mantle.is_none() {
+        eye += view.mantle_cam_offset;
+    }
+    let rot = view_rotation(sim.yaw, pitch, if view.feel { view.roll } else { 0.0 });
 
     if view.third_person {
         // Behind and above, pulled in if a wall is in the way.

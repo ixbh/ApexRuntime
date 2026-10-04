@@ -258,3 +258,15 @@ gravity. Replays: 2 of 3 recorded wall jumps match every tick.
 ### Not modelled yet
 A/D during a climb, mantle-boost view-pitch gate, slopes (and the 350/400
 slide clamps seen on slopes), the occasional 299 landing clamp, ziplines.
+
+### Lurch window across traversal, superglide direction, No-ma (2026-10-04)
+* The lurch clock restarts on every jump (ground, wall jump, mantle jump-off,
+  superglide) and runs through mantles/climbs (wiki; S21: a press 0.017 s
+  after a mantle jump-off turned 33°). The S21 mantle boost disables lurch
+  until landing (S21: 0.0° at 0.25 s). Superglides keep it: tap strafe out.
+* Superglide / mantle boost exit along the movement input (sideways
+  superglide; no backwards) at sprint speed if sprinting into the mantle.
+* A mantle starts only with no input or an input within 50° of the wall.
+  A ledge in reach with the input further off (A/D, or W+A/D turned 5°+)
+  is the "no-mantle state": the climb stops and hangs, for No-ma bounces.
+  Which zone the hang ends in on a 48 u block is OPEN (session 6).

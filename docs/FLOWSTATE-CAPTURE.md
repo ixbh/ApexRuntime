@@ -84,3 +84,22 @@ Client console: `fps_max 165`, `bridge_move_trace 1`,
 | 2 | same ledge, 10 deliberately early and 10 deliberately late jumps | window edges |
 | 3 | wall bounce: sprint, jump into wall, tap A/D + jump on contact, x5 | wall-bounce impulse and timing |
 | 4 | slide-jump chains that reach 350/400 u/s in air (what you did in session 2/4), x3 | the exact 350.0 / 400.0 speeds |
+
+## Session 6 protocol (superglide tap strafe, No-ma bounce, tap-strafe "boost")
+
+Settings: `fps_max 165`, `-devsdk`, `bridge_move_trace 1`. Copy the log
+right after each test (logs rotate at 10 MB). Mouse sensitivity 1.63.
+
+1. **Sideways superglide → tap strafe** (x5): mantle a waist-high ledge with W,
+   switch to A (or D) during the mantle, superglide, release A, scroll W
+   3-6 notches **without moving the mouse**. (Lurch window after a
+   superglide; forward-tap lurch with a known 90° angle.)
+2. **Plain superglide → tap strafe** (x5): same, W only, then hold D and
+   scroll W while turning right as you normally would.
+3. **No-ma fatigue bounce on a ~48 u block** (x5): stand next to it, jump,
+   land, hold W+D with the view turned ~10° toward D, jump into it, wait a
+   moment on the wall, jump. Note which ones bounced high. (Where the
+   no-mantle hang holds you: mini vs green zone.)
+4. **Same on a 60 u wall** (x3).
+5. **Long tap strafe for speed** (x5): slide-jump, release W, hold D, scroll
+   W as long as you can while turning hard right. (Does speed rise?)

@@ -10,7 +10,8 @@
 //!           F5 start/stop recording · F6 movement trail · F7 jump fatigue
 //!           R respawn
 //!           Esc release mouse
-//! Options:  --fps N   cap the frame rate (like Apex's fps_max; default: vsync)
+//! Options:  --fps N   cap the frame rate (like Apex's fps_max; default 165)
+//!           --vsync   no cap, sync to the monitor instead
 //!           --hz N    fixed simulation rate instead of one tick per frame
 //!           --fov N   Apex FOV slider value (default 110)
 //!           --sens N  Apex mouse sensitivity (default 2.0; 0.022° per count × N,
@@ -75,8 +76,19 @@ fn fixed_hz_from_args() -> Option<f64> {
     arg_value("--hz").filter(|v| (10.0..=1000.0).contains(v))
 }
 
+/// Default frame cap: 165 fps, a common Apex fps_max and the rate the
+/// superglide was practised at (jump→crouch exactly one frame apart).
+const DEFAULT_FPS_CAP: f64 = 165.0;
+
 fn fps_cap_from_args() -> Option<f64> {
-    arg_value("--fps").filter(|v| (20.0..=1000.0).contains(v))
+    if std::env::args().any(|a| a == "--vsync") {
+        return None;
+    }
+    Some(
+        arg_value("--fps")
+            .filter(|v| (20.0..=1000.0).contains(v))
+            .unwrap_or(DEFAULT_FPS_CAP),
+    )
 }
 /// Apex (like Source) turns 0.022° per mouse count × the sensitivity setting.
 const DEG_PER_COUNT_PER_SENS: f32 = 0.022;

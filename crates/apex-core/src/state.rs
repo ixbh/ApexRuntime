@@ -41,6 +41,9 @@ pub struct Mantle {
     /// sideways distance covered so far.
     pub side_vel: Vec3,
     pub side_offset: Vec3,
+    /// Sprinting into the mantle: it exits at sprint speed (wiki "Mantle
+    /// sprint"), also when the input turns sideways for a sideways superglide.
+    pub sprinting: bool,
 }
 
 /// An in-progress wall climb.
@@ -106,6 +109,12 @@ pub struct MovementState {
     /// fast the player was moving into it, for next tick's mantle/climb check.
     pub last_wall_normal: Vec3,
     pub last_wall_impact: f32,
+    /// Lurch window clock: time since the last jump (ground, wall, mantle
+    /// jump-off, superglide) or since leaving the ground; it keeps running
+    /// through mantles and climbs.
+    pub lurch_t: f32,
+    /// A mantle boost turned lurch off until the next ground contact.
+    pub lurch_disabled: bool,
 }
 
 impl MovementState {

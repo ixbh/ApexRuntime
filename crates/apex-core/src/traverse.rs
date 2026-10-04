@@ -80,12 +80,14 @@ pub fn find_ledge(
     Some((end, height))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn start_mantle(
     s: &mut MovementState,
     rep: &mut StepReport,
     end: Vec3,
     height: f32,
     dir: Vec3,
+    sprinting: bool,
     cfg: &MovementConfig,
 ) {
     let h = s.velocity.horizontal();
@@ -99,6 +101,7 @@ fn start_mantle(
         late_jump_ticks: None,
         side_vel,
         side_offset: Vec3::ZERO,
+        sprinting,
     });
     s.climb = None;
     s.sliding = false;
@@ -119,6 +122,7 @@ pub fn try_start(
     rep: &mut StepReport,
     wish_dir: Vec3,
     view_fwd: Vec3,
+    sprinting: bool,
     pre_move_h: Vec3,
     allow_climb: bool,
     cfg: &MovementConfig,
@@ -157,8 +161,11 @@ pub fn try_start(
     } else {
         cfg.mantle_max_height
     };
-    if let Some((end, height)) = find_ledge(world, cfg, s.position, -n, max_h) {
-        start_mantle(s, rep, end, height, -n, cfg);
+    // No-ma rule (wiki): a movement input more than 50° off the wall does
+    // not mantle (A/D, or W+A/D with the view turned 5°+); no input does.
+    let mantle_input = wish_dir == Vec3::ZERO || wish_dir.dot(-n) > cfg.mantle_input_min_dot;
+    if mantle_input && let Some((end, height)) = find_ledge(world, cfg, s.position, -n, max_h) {
+        start_mantle(s, rep, end, height, -n, sprinting, cfg);
         return;
     }
     // Climb attach is decided mid-tick, after the first half of gravity
@@ -229,15 +236,36 @@ fn leave_mantle_airborne(
 /// last 0.15 s of the mantle (community superglide trainer; S21 traces). The
 /// exit is a slide-jump from the ledge top: base speed + slide boost (capped)
 /// and a full, unfatigued jump. Measured |h| 460.0 at 165 fps (299 + 174.4, cap).
+/// Sprint speed if sprinting into the mantle (or now), else run speed.
+fn mantle_exit_speed(m: &Mantle, input: &MovementInput, cfg: &MovementConfig) -> f32 {
+    if m.sprinting {
+        cfg.sprint_speed
+    } else {
+        exit_speed(input, cfg)
+    }
+}
+
+/// Exit direction of a superglide / mantle boost: the movement input, so
+/// switching W to A/D during the pull gives a sideways superglide (wiki);
+/// backwards is not allowed (a back press cancels the mantle in game), no
+/// input goes over the ledge.
+fn exit_dir(m: &Mantle, wish_dir: Vec3) -> Vec3 {
+    let back = wish_dir.dot(m.dir).min(0.0);
+    let d = (wish_dir - m.dir * back).normalize_or_zero();
+    if d == Vec3::ZERO { m.dir } else { d }
+}
+
+#[allow(clippy::too_many_arguments)]
 fn superglide_exit(
     s: &mut MovementState,
     rep: &mut StepReport,
     m: &Mantle,
     input: &MovementInput,
+    wish_dir: Vec3,
     cfg: &MovementConfig,
     dt: f32,
 ) {
-    let base = exit_speed(input, cfg);
+    let base = mantle_exit_speed(m, input, cfg);
     let h = if s.time_since_slide_boost >= cfg.slide_boost_cooldown {
         s.time_since_slide_boost = 0.0;
         (base + cfg.slide_boost).min(cfg.slide_boost_cap).max(base)
@@ -245,7 +273,7 @@ fn superglide_exit(
         base
     };
     let vz = cfg.jump_speed(cfg.jump_height) - 0.5 * cfg.gravity * dt;
-    let dir = (m.dir * h + m.side_vel).normalize_or_zero();
+    let dir = (exit_dir(m, wish_dir) * h + m.side_vel).normalize_or_zero();
     leave_mantle_airborne(
         s,
         rep,
@@ -259,23 +287,28 @@ fn superglide_exit(
 
 /// S21 mantle boost: a late jump without the crouch. Measured |h| 388.7
 /// (= 1.3 × 299) and a 90 u jump.
+#[allow(clippy::too_many_arguments)]
 fn mantle_boost_exit(
     s: &mut MovementState,
     rep: &mut StepReport,
     m: &Mantle,
     input: &MovementInput,
+    wish_dir: Vec3,
     cfg: &MovementConfig,
     dt: f32,
 ) {
-    let base = exit_speed(input, cfg);
+    let base = mantle_exit_speed(m, input, cfg);
     let (h, height) = if cfg.mantle_boost_enabled {
         rep.mantle_boost = true;
+        // Mantle boost turns lurch off until the next landing (wiki; S21: an
+        // A press 0.25 s after a boost turned 0.0°).
+        s.lurch_disabled = true;
         (base * cfg.mantle_boost_mult, cfg.mantle_boost_jump_height)
     } else {
         (base, cfg.jump_height)
     };
     let vz = cfg.jump_speed(height) - 0.5 * cfg.gravity * dt;
-    let dir = (m.dir * h + m.side_vel).normalize_or_zero();
+    let dir = (exit_dir(m, wish_dir) * h + m.side_vel).normalize_or_zero();
     leave_mantle_airborne(
         s,
         rep,
@@ -302,11 +335,11 @@ pub fn mantle_tick(
     // after it -> superglide; otherwise -> mantle boost.
     if let Some(n) = m.late_jump_ticks {
         if pressed.contains(Buttons::CROUCH) && f32::from(n) + 1.0 == cfg.superglide_crouch_ticks {
-            superglide_exit(s, rep, &m, input, cfg, dt);
+            superglide_exit(s, rep, &m, input, wish_dir, cfg, dt);
             return;
         }
         if f32::from(n) + 1.0 >= cfg.superglide_crouch_ticks {
-            mantle_boost_exit(s, rep, &m, input, cfg, dt);
+            mantle_boost_exit(s, rep, &m, input, wish_dir, cfg, dt);
             return;
         }
         m.late_jump_ticks = Some(n + 1);
@@ -318,7 +351,7 @@ pub fn mantle_tick(
             // Crouch on this same tick does not count: the superglide needs
             // the crouch exactly one tick *after* the jump (decided next tick).
             if cfg.superglide_crouch_ticks <= 0.0 {
-                mantle_boost_exit(s, rep, &m, input, cfg, dt);
+                mantle_boost_exit(s, rep, &m, input, wish_dir, cfg, dt);
                 return;
             }
             m.late_jump_ticks = Some(0);
@@ -543,17 +576,29 @@ pub fn climb_tick(
     // Reached a ledge with the input pointing at it: mantle over it. A
     // sideways climb looking past the ledge does not (wiki "No-ma climb").
     let hull = cfg.hull(s.crouched);
-    if into >= cfg.mantle_input_min_dot {
-        let max_h = cfg.mantle_max_height;
-        if let Some((end, height)) = find_ledge(world, cfg, s.position, -n, max_h) {
-            start_mantle(s, rep, end, height, -n, cfg);
-            return;
-        }
+    let ledge = find_ledge(world, cfg, s.position, -n, cfg.mantle_max_height);
+    if into > cfg.mantle_input_min_dot
+        && let Some((end, height)) = ledge
+    {
+        let sprinting = input.buttons.contains(Buttons::SPRINT) && input.forward > 0.0;
+        start_mantle(s, rep, end, height, -n, sprinting, cfg);
+        return;
     }
+    // A ledge in reach but the input points too far off the wall to mantle:
+    // the wiki's "no-mantle state" (No-ma climb / No-ma bounce). The climb
+    // stops where it is and the player hangs, so a fatigued jump into a
+    // chest-high wall stays low enough to wall-bounce from.
+    let no_mantle_hang = ledge.is_some();
 
     // Vertical speed.
     let mut vz = s.velocity.z;
-    if climbing_up {
+    if no_mantle_hang {
+        vz = if vz > 0.0 {
+            (vz - cfg.climb_accel * dt).max(0.0)
+        } else {
+            (vz + cfg.climb_accel * dt).min(0.0)
+        };
+    } else if climbing_up {
         // Measured S21 W climb profile (it reaches the cutoff after 51 ticks
         // at 60 fps from a jump).
         if !c.peaked {
@@ -640,6 +685,13 @@ pub fn climb_tick(
     if !tr.start_solid {
         s.position = tr.end_pos;
     }
+    let probe = cfg.wall_probe_dist + cfg.climb_suction * dt;
+    if probe_wall(world, hull, s.position, -n, probe).is_none() {
+        // Off the side of the wall: no climb-space penalty.
+        detach(s, tangent * along + Vec3::new(0.0, 0.0, vz), 0.0);
+        return;
+    }
+    let below_top = s.position;
     let tr = world.trace_hull(s.position, s.position + Vec3::new(0.0, 0.0, vz * dt), hull);
     s.position = tr.end_pos;
     if tr.fraction < 1.0 {
@@ -652,17 +704,16 @@ pub fn climb_tick(
         vz = 0.0;
     }
 
-    // Follow the wall's surface; off its end: let go.
-    match probe_wall(
-        world,
-        hull,
-        s.position,
-        -n,
-        cfg.wall_probe_dist + cfg.climb_suction * dt,
-    ) {
+    // Follow the wall's surface. Rising past the top without mantling (input
+    // off the wall: the wiki's "no-mantle state") hangs at the ledge; the
+    // 1 s non-upward timer or a jump (No-ma bounce) ends it.
+    match probe_wall(world, hull, s.position, -n, probe) {
         Some(n2) if n2.dot(n) > 0.7 => c.normal = n2,
+        _ if vz > 0.0 => {
+            s.position = below_top;
+            vz = 0.0;
+        }
         _ => {
-            // Off the side / top of the wall: no climb-space penalty.
             detach(s, tangent * along + Vec3::new(0.0, 0.0, vz), 0.0);
             return;
         }

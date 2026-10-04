@@ -190,6 +190,7 @@ pub fn step_with_report(
             &mut rep,
             wish_dir,
             fwd,
+            base_speed >= cfg.sprint_speed,
             pre_move_h,
             allow_climb,
             cfg,
@@ -250,8 +251,9 @@ pub fn step_with_report(
         // Split gravity around the move: exact for constant gravity (the
         // trajectory is the midpoint rule), and it is what Source does.
         s.velocity.z -= 0.5 * cfg.gravity * dt;
-        // Lurch time = time since the first airborne tick (the jump tick counts as 0).
-        let t_air = if was_on_ground { 0.0 } else { s.time_in_air };
+        // Lurch time = time since the last jump / first airborne tick (the
+        // jump tick counts as 0); restarts on wall jumps and mantle exits.
+        let t_air = if was_on_ground { 0.0 } else { s.lurch_t };
         rep.lurch_k = lurch(&mut s, input, wish_dir, t_air, cfg);
         // A lurch tick replaces the normal air acceleration (fits the S21
         // traces at 60 and 144 fps; adding both overshoots late presses).
@@ -333,6 +335,14 @@ fn finish_tick(
         };
         s.time_on_ground = 0.0;
     }
+    if s.on_ground() {
+        s.lurch_t = 0.0;
+        s.lurch_disabled = false;
+    } else if was_on_ground || rep.jumped {
+        s.lurch_t = 0.0;
+    } else {
+        s.lurch_t += dt;
+    }
     s.time_since_slide_boost = (s.time_since_slide_boost + dt).min(f32::MAX / 2.0);
     s.prev_buttons = input.buttons;
     s.prev_forward = input.forward;
@@ -411,6 +421,9 @@ fn lurch(
     t_air: f32,
     cfg: &MovementConfig,
 ) -> f32 {
+    if s.lurch_disabled {
+        return 0.0;
+    }
     let newly = |cur: f32, prev: f32| cur != 0.0 && (prev == 0.0 || cur.signum() != prev.signum());
     if !(newly(input.forward, s.prev_forward) || newly(input.right, s.prev_right)) {
         return 0.0;

@@ -600,3 +600,145 @@ fn looking_away_or_crouching_detaches_a_climb() {
     let crouch = input(1.0, 0.0, Buttons::CROUCH);
     assert!(step(&s, &crouch, &cfg, &w, DT60).climb.is_none());
 }
+
+/// Sprint into a 48 u ledge at 165 fps holding W, then on the superglide
+/// window press jump (and crouch one tick later if `crouch`) with `exit`
+/// as the movement input. Returns the state just after the exit.
+fn superglide_with(exit: MovementInput, crouch: bool) -> (MovementState, StepReport) {
+    let w = world_with_block(40.0, 48.0);
+    let cfg = MovementConfig::default();
+    let mut s = grounded_at(&w, &cfg, 0.0, 0.0);
+    for _ in 0..1000 {
+        let (n, r) = step_with_report(&s, &input(1.0, 0.0, SPRINT_W), &cfg, &w, DT165);
+        s = n;
+        if r.mantle_started {
+            break;
+        }
+    }
+    let m = s.mantle.expect("mantling");
+    let ticks_total = ((m.duration - m.t) / DT165).ceil() as usize;
+    for _ in 0..ticks_total - 3 {
+        s = step(&s, &input(1.0, 0.0, SPRINT_W), &cfg, &w, DT165);
+    }
+    let jump = MovementInput {
+        buttons: exit.buttons | Buttons::JUMP,
+        ..exit
+    };
+    s = step(&s, &jump, &cfg, &w, DT165);
+    let second = MovementInput {
+        buttons: if crouch {
+            jump.buttons | Buttons::CROUCH
+        } else {
+            jump.buttons
+        },
+        ..exit
+    };
+    step_with_report(&s, &second, &cfg, &w, DT165)
+}
+
+#[test]
+fn tap_strafe_out_of_a_superglide() {
+    // Wiki: a superglide uses a jump input, so it starts a lurch window and
+    // can be tap-strafed. The old clock (time since leaving the ground) had
+    // run out during the mantle.
+    let (mut s, r) = superglide_with(input(1.0, 0.0, SPRINT_W), true);
+    assert!(r.superglide, "{r:?}");
+    let w = world_with_block(40.0, 48.0);
+    let cfg = MovementConfig::default();
+    let glide = s.velocity.horizontal();
+    for _ in 0..10 {
+        s = step(&s, &input(0.0, 0.0, Buttons::NONE), &cfg, &w, DT165);
+    }
+    let (n, r) = step_with_report(&s, &input(0.0, 1.0, Buttons::NONE), &cfg, &w, DT165);
+    assert!(r.lurch_k > 0.4, "lurch k {}", r.lurch_k);
+    let turned = glide
+        .normalize_or_zero()
+        .dot(n.velocity.horizontal().normalize_or_zero());
+    assert!(turned < 0.9, "heading barely changed");
+    assert!(
+        (n.horizontal_speed() - glide.length()).abs() < 1.0,
+        "speed kept"
+    );
+}
+
+#[test]
+fn mantle_boost_disables_lurch_until_landing() {
+    // Wiki + S21 (an A press 0.25 s after a boost turned 0.0°).
+    let (mut s, r) = superglide_with(input(1.0, 0.0, SPRINT_W), false);
+    assert!(r.mantle_boost, "{r:?}");
+    let w = world_with_block(40.0, 48.0);
+    let cfg = MovementConfig::default();
+    for _ in 0..10 {
+        s = step(&s, &input(0.0, 0.0, Buttons::NONE), &cfg, &w, DT165);
+    }
+    let (_, r) = step_with_report(&s, &input(0.0, 1.0, Buttons::NONE), &cfg, &w, DT165);
+    assert_eq!(r.lurch_k, 0.0);
+}
+
+#[test]
+fn sideways_superglide_follows_the_input() {
+    // Wiki: the pull finishes without W, so switching to A/D before the
+    // superglide inputs sends it sideways (at full sprint-glide speed).
+    let d = MovementInput {
+        right: 1.0,
+        buttons: SPRINT_W,
+        ..MovementInput::default()
+    };
+    let (s, r) = superglide_with(d, true);
+    assert!(r.superglide, "{r:?}");
+    let h = s.velocity.horizontal();
+    assert!((h.length() - 460.0).abs() < 0.5, "|h| {}", h.length());
+    assert!(h.y.abs() > 0.9 * h.length(), "sideways: {h:?}");
+}
+
+#[test]
+fn no_ma_fatigue_bounce_on_a_chest_high_wall() {
+    // Wiki "No-ma-Bounce": W+D with the view turned 5°+ toward D points the
+    // input more than 50° off the wall, so a fatigued jump into a 48 u wall
+    // climbs instead of mantling, hangs at the ledge, and jumps off as a
+    // wall bounce. Holding W straight at it mantles.
+    let w = world_with_block(45.0, 48.0);
+    let cfg = MovementConfig::default();
+    let mut s = grounded_at(&w, &cfg, 45.0 - 16.0 - 1.0 / 32.0 - 4.0, 0.0);
+    s.landed_from_jump = true;
+    s.time_on_ground = 0.0;
+    let no_ma = MovementInput {
+        forward: 1.0,
+        right: 1.0,
+        yaw: -10.0,
+        ..MovementInput::default()
+    };
+    let jump = MovementInput {
+        buttons: Buttons::JUMP,
+        ..no_ma
+    };
+    s = step(&s, &jump, &cfg, &w, DT60);
+    let mut climbed = false;
+    for _ in 0..40 {
+        let (n, r) = step_with_report(&s, &no_ma, &cfg, &w, DT60);
+        s = n;
+        assert!(!r.mantle_started, "mantled at z {}", s.position.z);
+        climbed |= r.climb_started;
+    }
+    assert!(climbed && s.climb.is_some(), "hanging on the wall");
+    assert!(s.position.z < 48.0, "below the ledge: {}", s.position.z);
+    let (s, r) = step_with_report(&s, &jump, &cfg, &w, DT60);
+    assert!(r.wall_jump);
+    // Mini or green zone depending on where the no-mantle hang holds you:
+    // OPEN, to be measured in Flowstate (session 6, No-ma bounce on 48 u).
+    assert!(s.velocity.z > 200.0, "bounce vz {}", s.velocity.z);
+
+    // Same jump looking straight at it with W: mantles.
+    let mut s = grounded_at(&w, &cfg, 45.0 - 16.0 - 1.0 / 32.0 - 4.0, 0.0);
+    s.landed_from_jump = true;
+    s.time_on_ground = 0.0;
+    let w_only = input(1.0, 0.0, Buttons::NONE);
+    s = step(&s, &input(1.0, 0.0, Buttons::JUMP), &cfg, &w, DT60);
+    let mut mantled = false;
+    for _ in 0..40 {
+        let (n, r) = step_with_report(&s, &w_only, &cfg, &w, DT60);
+        s = n;
+        mantled |= r.mantle_started;
+    }
+    assert!(mantled);
+}

@@ -1,9 +1,20 @@
-//! apex-weapons: Apex weapon definitions and recoil, read at runtime from
-//! the user's personal RSX exports (`weapon/mp_weapon_*.txt`,
-//! `weapon/viewkick_patterns.txt`). Nothing here embeds Apex data; hosts map
-//! the values onto their own weapon systems (IW4L: `asset_game`).
+//! apex-weapons: an engine-free Apex weapon engine. Gun behaviour is read
+//! at runtime from the user's personal RSX exports (`weapon/mp_weapon_*.txt`,
+//! `viewkick_patterns.txt`, `blast_patterns.txt`); nothing here embeds Apex
+//! data. [`spec`] turns a definition into a [`GunSpec`], [`sim`] runs a
+//! player's weapons (slots, fire modes, reloads, spread, pellets, recoil)
+//! deterministically, [`ballistics`] flies the bullets; hosts sweep the
+//! bullet segments through their world and apply the damage.
 
 use std::collections::HashMap;
+
+pub mod ballistics;
+pub mod sim;
+pub mod spec;
+
+pub use ballistics::{Bolt, HitZone, pellet_damage, pellet_dir};
+pub use sim::{Activity, Shot, Slot, WeaponEvent, WeaponInput, WeaponState};
+pub use spec::{Ballistics, Charge, Damage, FireMode, GunSpec, Spread, parse_blast_patterns};
 
 /// A KeyValues block: `"key" "value"` pairs and nested `"name" { ... }`
 /// blocks (as RSX writes `WeaponData` and the viewkick pattern table).
@@ -33,10 +44,10 @@ impl KvBlock {
     pub fn num(&self, key: &str) -> Option<f32> {
         let v = self.get(key)?.trim();
         if let Ok(f) = v.parse::<f64>() {
-            if f > i64::MAX as f64 {
-                if let Ok(u) = v.parse::<u64>() {
-                    return Some(u as i64 as f32);
-                }
+            if f > i64::MAX as f64
+                && let Ok(u) = v.parse::<u64>()
+            {
+                return Some(u as i64 as f32);
             }
             return Some(f as f32);
         }

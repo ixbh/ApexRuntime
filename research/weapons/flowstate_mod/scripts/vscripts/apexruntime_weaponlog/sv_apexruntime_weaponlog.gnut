@@ -107,7 +107,9 @@ void function WLog_Fill()
 	entity p = WLog_Player()
 	entity w = IsValid( p ) ? p.GetActiveWeapon( eActiveInventorySlot.mainHand ) : null
 	if ( IsValid( w ) )
-		w.SetWeaponPrimaryClipCount( w.GetWeaponPrimaryClipCountMax() )
+	{
+		try { w.SetWeaponPrimaryClipCount( w.GetWeaponPrimaryClipCountMax() ) } catch ( e0 ) {}
+	}
 	AgentLink_Reply( "{\"ok\":true}" )
 }
 

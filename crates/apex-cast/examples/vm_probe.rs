@@ -41,6 +41,16 @@ fn main() {
                 eye.point(g[muzzle].pos)
             };
             let fmt = |p: [f32; 3]| format!("({:6.1} {:6.1} {:6.1})", p[0], p[1], p[2]);
+            let pov = gun.skeleton.index_of("jx_c_pov").unwrap();
+            let pov_rel = |t: f32| {
+                let mut pose = rest.clone();
+                a.sample_into(t, &bind, &rest, &mut pose, 1.0);
+                let g = gun.skeleton.globals(&pose);
+                let eye = g[cam].inverse();
+                (eye.point(g[pov].pos), eye.vector(g[pov].vector([0.0, 0.0, 1.0])))
+            };
+            let (pp, pf) = pov_rel(0.0);
+            println!("    pov vs camera at t0: pos {} fwd {}", fmt(pp), fmt(pf));
             println!(
                 "{name}{suffix:3} dur {:5.2}s loop {} curves {:4} {:?} cam-keyed {} gun-keyed {}  muzzle t0 {} mid {}",
                 a.duration(),

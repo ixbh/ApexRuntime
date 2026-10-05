@@ -59,11 +59,19 @@ pinned to the commit above (no local paths).
    dip + dropped gun, climb bob + lowered gun, landing camera punch, FOV
    boost at speed (sens unchanged). Amplitudes hand-tuned in `Tuning`;
    `IW4L_APEX_FEEL=0` disables. Tune from play tests.
-2. **Asset pipeline**: primary source is the offline Flowstate install
-   (`F:\R5Flowstate\paks\Win64`, modern content), exported by the user
-   with a community tool into `F:\ApexContent`; never the Steam install
-   (fallback: copy one file out with the game closed). Sketchfab glTFs
-   optional for early tests.
+2. **Asset pipeline + Apex viewmodel** — working (IW4L 83869e5..563abaa,
+   see docs/ASSET-PIPELINE.md). `apex-cast` reads RSX Cast exports;
+   `render_anim::anim::apex_viewmodel` replaces MW2's gun/arms with the
+   R-99 + Wattson arms (`IW4L_APEX_CONTENT` in `.env`), Apex's own
+   sequences driven by Apex movement state; `render_gpu` draws it in its
+   own pass (viewmodel depth band, before post). Apex sequences are full
+   poses (sprint, sprintslide, lower, reload, ads_in) or additive layers
+   (idle, fire, jump, land) on the hip pose = first frame of `ads_in`.
+   Framing live-tunable in `<content>/viewmodel.txt` (defaults fov 72,
+   right 1.5, down 1.0 — user approved). Untextured until the HD texture
+   pack finishes downloading (RSX crashes on missing `.opt.starpak` data).
+   R-99 weapon definition exported (`weapons/r99/settings`): zoom_fov 60,
+   sway/bob/jolt values for stage 3.
 3. Apex gun behaviour (fire rate, recoil, damage, mags, attachments).
 4. Characters + animations driven by Apex movement (slide/climb/mantle poses).
 5. Abilities (Pathfinder grapple, Octane pad first).

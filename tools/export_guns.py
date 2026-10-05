@@ -57,6 +57,22 @@ ROSTER = {
     "mp_weapon_wingman": "Wingman",
 }
 
+# Menu category per gun (also picks a fitting carrier weapon class in hosts).
+CATEGORY = {
+    "mp_weapon_rspn101": "assault", "mp_weapon_vinson": "assault", "mp_weapon_energy_ar": "assault",
+    "mp_weapon_hemlok": "assault", "mp_weapon_nemesis": "assault",
+    "mp_weapon_r97": "smg", "mp_weapon_volt_smg": "smg", "mp_weapon_alternator_smg": "smg",
+    "mp_weapon_pdw": "smg", "mp_weapon_car": "smg",
+    "mp_weapon_lmg": "lmg", "mp_weapon_esaw": "lmg", "mp_weapon_lstar": "lmg", "mp_weapon_dragon_lmg": "lmg",
+    "mp_weapon_g2": "marksman", "mp_weapon_doubletake": "marksman", "mp_weapon_3030": "marksman",
+    "mp_weapon_bow": "marksman",
+    "mp_weapon_dmr": "sniper", "mp_weapon_sniper": "sniper", "mp_weapon_sentinel": "sniper",
+    "mp_weapon_defender": "sniper",
+    "mp_weapon_shotgun": "shotgun", "mp_weapon_mastiff": "shotgun", "mp_weapon_energy_shotgun": "shotgun",
+    "mp_weapon_shotgun_pistol": "shotgun",
+    "mp_weapon_autopistol": "pistol", "mp_weapon_semipistol": "pistol", "mp_weapon_wingman": "pistol",
+}
+
 # Guns whose viewmodel moved to the newer "techart" layout keep their
 # sequences under the older internal folder.
 ANIM_OVERRIDE = {
@@ -112,6 +128,7 @@ def main():
         manifest.append({
             "gun": g,
             "name": ROSTER.get(g, g),
+            "category": CATEGORY.get(g, "assault"),
             "definition": f"game/weapon/{g}.txt",
             "model": f"game/{folder}/{stem}_LOD0.cast",
             "anims": [f"game/animseq/{anim_dir}", f"game/animseq_derived/{anim_dir}"],

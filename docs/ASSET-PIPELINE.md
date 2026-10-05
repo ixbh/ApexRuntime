@@ -35,10 +35,16 @@ Gotchas found the hard way:
   `rsx_nogui -nogui --loadwhitelist mdl_,arig,aseq,wepn,matl --list out.csv --listformat csv <pak>`
 - Exports default to Cast for `mdl_`/`arig`/`aseq`. Name filter:
   `--exportfilter <substring>` (ImGui filter, commas = OR).
-- **Textures do not export from the CLI** (any `txtr`, or a model with its
-  materials loaded, exits 1). The texture step is the GUI (`rsx.exe`).
-- `pc_all.opt.starpak` (Flowstate's optional high-res textures) is not
-  installed: lower-res textures only.
+- Textures need Flowstate's HD texture pack (`*.opt.starpak`, ~75 GB,
+  installed 2026-10-04): without it RSX crashes reading the top mip (CLI
+  exit 1, GUI crash). With it: `-matltextures --loadwhitelist mdl_,matl,txtr`
+  exports a model plus all its maps as PNG next to the Cast file.
+- Audio: `rsx_nogui -nogui -export --loadwhitelist asrc --exporttypes asrc
+  --exportfilter <name> <F:\R5Flowstateudio\ship\general.mbnk>` writes
+  WAVs (253k sources). The event/project file (`audio.mprj` v42) is not
+  readable, so which layers a sound event mixes is unknown.
+- Weapon data: `--loadwhitelist wepn --exporttypes wepn --exportfilter
+  mp_weapon_r97.rpak` (and `viewkick_patterns`) -> KeyValues text.
 
 Exported so far (`F:\ApexContent`, never committed):
 

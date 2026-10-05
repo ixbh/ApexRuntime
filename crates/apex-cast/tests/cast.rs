@@ -319,3 +319,17 @@ fn personal_exports_load_when_present() {
         g[mag].pos, g2[mag].pos
     );
 }
+
+#[test]
+fn arm_sides_in_model_space() {
+    let arms = std::path::Path::new(
+        r"F:\ApexContent\characters\wattson\mdl\Weapons\arms\pov_pilot_light_wattson_LOD0.cast",
+    );
+    if !arms.exists() {
+        return;
+    }
+    let arms = Model::from_bytes(&std::fs::read(arms).unwrap()).unwrap();
+    let g = arms.skeleton.globals(&arms.skeleton.rest_locals());
+    let x = |n: &str| g[arms.skeleton.index_of(n).unwrap()].pos[0];
+    eprintln!("right wrist x {} left wrist x {}", x("def_r_wrist"), x("def_l_wrist"));
+}

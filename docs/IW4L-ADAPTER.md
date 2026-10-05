@@ -72,7 +72,17 @@ pinned to the commit above (no local paths).
    pack finishes downloading (RSX crashes on missing `.opt.starpak` data).
    R-99 weapon definition exported (`weapons/r99/settings`): zoom_fov 60,
    sway/bob/jolt values for stage 3.
-3. Apex gun behaviour (fire rate, recoil, damage, mags, attachments).
+3. **Apex guns** — R-99, Peacekeeper, Wingman (IW4L cab1587..82fef00).
+   `asset_game::apex_weapons::ApexGun` maps weapon class -> gun (rifle/SMG/
+   MG/sniper -> R-99, shotgun -> PK, pistol -> Wingman); stats from each
+   exported definition applied in `WeaponRegistry::facts_of` (all
+   namespaces), recoil = Apex viewkick pattern (client), sounds = per-gun
+   layer recipes (`audio::apex_weapon_sfx`), muzzle flash hand-made.
+   Open: PK fixed blast pattern (MW2 random cone for now), Apex projectile
+   travel/drop, other players' gun sounds, mixing recipe (audio.mprj v42
+   unreadable; user reference recording pending), exact spray size (wall
+   test pending, user Apex FOV 120). Test: `.un-apex.ps1 -Extra "give
+   spas12_mp"` (PK) or `give deserteagle_mp` (Wingman).
 4. Characters + animations driven by Apex movement (slide/climb/mantle poses).
 5. Abilities (Pathfinder grapple, Octane pad first).
 6. Items/loot, Apex HUD, shields/heals, SFX.

@@ -72,17 +72,19 @@ pinned to the commit above (no local paths).
    pack finishes downloading (RSX crashes on missing `.opt.starpak` data).
    R-99 weapon definition exported (`weapons/r99/settings`): zoom_fov 60,
    sway/bob/jolt values for stage 3.
-3. **Apex guns** — R-99, Peacekeeper, Wingman (IW4L cab1587..82fef00).
-   `asset_game::apex_weapons::ApexGun` maps weapon class -> gun (rifle/SMG/
-   MG/sniper -> R-99, shotgun -> PK, pistol -> Wingman); stats from each
-   exported definition applied in `WeaponRegistry::facts_of` (all
-   namespaces), recoil = Apex viewkick pattern (client), sounds = per-gun
-   layer recipes (`audio::apex_weapon_sfx`), muzzle flash hand-made.
-   Open: PK fixed blast pattern (MW2 random cone for now), Apex projectile
-   travel/drop, other players' gun sounds, mixing recipe (audio.mprj v42
-   unreadable; user reference recording pending), exact spray size (wall
-   test pending, user Apex FOV 120). Test: `.un-apex.ps1 -Extra "give
-   spas12_mp"` (PK) or `give deserteagle_mp` (Wingman).
+3. **Apex guns** - our engine (IW4L 70563be..7cbc3e0). 29-gun roster from
+   `<content>/guns.json` (ApexRuntime `tools/export_guns.py`), each on its own
+   MW2 carrier weapon (`asset_game::apex_weapons`); loadout menu on B
+   (`console::apex_menu`, gives the carrier). Shooting: `sim::apex_guns` runs
+   `apex-weapons` per command (fire modes, cadence, pellets/spread, recoil
+   index), MW2's weapon step no longer fires; server flies projectiles and
+   sends each tick's segment through MW2's lag-compensated hit test
+   (`Emission::travelled` keeps falloff). MW2 keeps magazine/reload timing,
+   ADS, switching on the Apex numbers. Verified: bots kill with Apex damage
+   (Spitfire 18/hit). Open: L-STAR heat, Charge Rifle beam, Bocek draw
+   anims; projectile tracers (client tracer is MW2's instant one); sounds
+   for 26 guns (recipes only R-99/PK/Wingman); blast-pattern units and drag
+   model are estimates (wall test); exact spray size; shields.
 4. Characters + animations driven by Apex movement (slide/climb/mantle poses).
 5. Abilities (Pathfinder grapple, Octane pad first).
 6. Items/loot, Apex HUD, shields/heals, SFX.

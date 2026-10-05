@@ -86,14 +86,19 @@ ANIM_OVERRIDE = {
 }
 
 
-def viewmodel_of(gun):
+def model_of(gun, key):
+    """Top-level `key` of a definition (one tab deep; mods are deeper)."""
     path = os.path.join(DEFS, gun + ".txt")
     try:
         text = open(path, encoding="utf-8", errors="replace").read()
     except OSError:
         return None
-    m = re.search(r'^\s*"viewmodel"\s*"([^"]+)"', text, re.M)
+    m = re.search(r'^	"' + key + r'"\s*"([^"]+)"', text, re.M)
     return m.group(1).replace("\\", "/") if m else None
+
+
+def viewmodel_of(gun):
+    return model_of(gun, "viewmodel")
 
 
 def rsx(args, tag):
@@ -124,6 +129,9 @@ def main():
         weapon_dir = folder.split("/", 1)[1] if "/" in folder else folder
         anim_dir = ANIM_OVERRIDE.get(g, f"{weapon_dir}/{stem}")
         models.append(win(vm))
+        wm = model_of(g, "playermodel")
+        if wm:
+            models.append(win(wm))
         anims.append(win(anim_dir) + "\\")
         manifest.append({
             "gun": g,
@@ -131,6 +139,7 @@ def main():
             "category": CATEGORY.get(g, "assault"),
             "definition": f"game/weapon/{g}.txt",
             "model": f"game/{folder}/{stem}_LOD0.cast",
+            "world_model": (f"game/{wm.rsplit('.', 1)[0]}_LOD0.cast" if wm else None),
             "anims": [f"game/animseq/{anim_dir}", f"game/animseq_derived/{anim_dir}"],
         })
         print(f"{g:32s} {ROSTER.get(g, '?'):15s} {vm}")

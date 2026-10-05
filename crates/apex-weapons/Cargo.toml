@@ -1,0 +1,12 @@
+[package]
+name = "apex-weapons"
+description = "Reads Apex weapon definition text (KeyValues as RSX exports it) and viewkick patterns; recoil sampling. Engine-free; data comes from the user's personal exports at runtime."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true

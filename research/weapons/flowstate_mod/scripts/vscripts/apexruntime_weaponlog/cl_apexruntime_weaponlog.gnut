@@ -1,0 +1,64 @@
+// ApexRuntime weapon capture (offline Flowstate only), client half: one
+// "[WLOG] f" line per frame while running (time, weapon, clip, reloading,
+// ADS fraction, eye and camera angles, viewmodel sequence).
+
+global function ClientCodeCallback_ApexRuntime_WeaponLog_ModInit
+global function WLog_Start
+global function WLog_Stop
+
+struct
+{
+	int gen = 0
+} file
+
+void function ClientCodeCallback_ApexRuntime_WeaponLog_ModInit()
+{
+	printt( "[WLOG] client ready" )
+}
+
+void function WLog_Start( string tag )
+{
+	file.gen++
+	thread WLog_Thread( file.gen, tag )
+	AgentLink_Reply( "{\"ok\":true}" )
+}
+
+void function WLog_Stop()
+{
+	file.gen++
+	AgentLink_Reply( "{\"ok\":true}" )
+}
+
+void function WLog_Thread( int gen, string tag )
+{
+	while ( gen == file.gen )
+	{
+		entity p = GetLocalViewPlayer()
+		if ( IsValid( p ) )
+		{
+			entity w = p.GetActiveWeapon( eActiveInventorySlot.mainHand )
+			string name = "none"
+			int clip = -1
+			int reloading = 0
+			if ( IsValid( w ) )
+			{
+				name = w.GetWeaponClassName()
+				clip = w.GetWeaponPrimaryClipCount()
+				if ( w.IsReloading() )
+					reloading = 1
+			}
+			string seq = "-"
+			entity vm = p.GetViewModelEntity()
+			if ( IsValid( vm ) )
+			{
+				try { seq = vm.GetCurrentSequenceName() } catch ( e1 ) {}
+			}
+			float zoom = 0.0
+			try { zoom = p.GetZoomFrac() } catch ( e2 ) {}
+			vector eye = p.EyeAngles()
+			vector cam = p.CameraAngles()
+			printt( format( "[WLOG] f %s %.4f %s %d %d %.3f %.4f %.4f %.4f %.4f %.4f %s", tag, Time(), name, clip, reloading, zoom, eye.x, eye.y, cam.x, cam.y, cam.z, seq ) )
+		}
+		WaitFrame()
+	}
+}

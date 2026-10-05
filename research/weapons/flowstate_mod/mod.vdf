@@ -1,0 +1,9 @@
+"mod"
+{
+	"author"		"ApexRuntime"
+	"name"			"ApexRuntime Weapon Log"
+	"id"			"ApexRuntime.WeaponLog"
+	"description"	"Offline capture helper: gives weapons, spawns a dummy, logs weapon settings, shots, recoil, reloads and damage to script.log (WLOG lines)."
+	"version"		"1.0.0"
+	"realm"			"both"
+}

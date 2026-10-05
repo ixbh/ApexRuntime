@@ -1,0 +1,214 @@
+// ApexRuntime weapon capture (offline Flowstate only), server half.
+// Driven over the dev agent link by research/weapons/capture.py.
+
+global function CodeCallback_ApexRuntime_WeaponLog_ModInit
+global function WLog_Setup
+global function WLog_Give
+global function WLog_Aim
+global function WLog_Dump
+global function WLog_Note
+global function WLog_Fill
+
+struct
+{
+	bool hooked = false
+	entity dummy
+	vector dummyOrigin
+	vector home
+	vector homeAngles
+	bool haveHome = false
+} file
+
+void function CodeCallback_ApexRuntime_WeaponLog_ModInit()
+{
+	printt( "[WLOG] server ready" )
+}
+
+entity function WLog_Player()
+{
+	array<entity> players = GetPlayerArray()
+	if ( players.len() == 0 )
+		return null
+	return players[0]
+}
+
+void function WLog_OnDummyDamage( entity ent, var damageInfo )
+{
+	entity weapon = DamageInfo_GetWeapon( damageInfo )
+	string name = "none"
+	if ( IsValid( weapon ) )
+		name = weapon.GetWeaponClassName()
+	vector pos = DamageInfo_GetDamagePosition( damageInfo )
+	entity attacker = DamageInfo_GetAttacker( damageInfo )
+	float dist = -1.0
+	if ( IsValid( attacker ) )
+		dist = Distance( attacker.EyePosition(), pos )
+	printt( format( "[WLOG] dmg %.4f %s %.3f %d %.1f %.1f %.1f %.1f", Time(), name, DamageInfo_GetDamage( damageInfo ), DamageInfo_GetHitGroup( damageInfo ), dist, pos.x, pos.y, pos.z ) )
+	// Keep the dummy standing.
+	ent.SetHealth( ent.GetMaxHealth() )
+}
+
+// Spawn a dummy `dist` units in front of the start spot (flat); every gun
+// shoots from the same place.
+void function WLog_Setup( float dist )
+{
+	entity p = WLog_Player()
+	if ( !IsValid( p ) )
+	{
+		AgentLink_Reply( "{\"ok\":false,\"error\":\"no player\"}" )
+		return
+	}
+	if ( !file.hooked )
+	{
+		AddDamageCallback( "npc_dummie", WLog_OnDummyDamage )
+		file.hooked = true
+	}
+	if ( !file.haveHome )
+	{
+		file.home = p.GetOrigin()
+		file.homeAngles = < 0, p.EyeAngles().y, 0 >
+		file.haveHome = true
+	}
+	if ( IsValid( file.dummy ) )
+		file.dummy.Destroy()
+	vector fwd = AnglesToForward( file.homeAngles )
+	file.dummyOrigin = file.home + fwd * dist
+	file.dummy = SpawnNPCCombatDummie( file.dummyOrigin, < 0, file.homeAngles.y + 180, 0 >, 0 )
+	bool ok = IsValid( file.dummy )
+	if ( ok )
+	{
+		file.dummy.SetMaxHealth( 100000 )
+		file.dummy.SetHealth( 100000 )
+	}
+	printt( format( "[WLOG] setup %.4f dist %.1f", Time(), dist ) )
+	AgentLink_Reply( ok ? "{\"ok\":true}" : "{\"ok\":false,\"error\":\"no dummy\"}" )
+}
+
+// Back to the start spot, looking at the dummy's chest.
+void function WLog_Aim()
+{
+	entity p = WLog_Player()
+	if ( !IsValid( p ) || !file.haveHome )
+	{
+		AgentLink_Reply( "{\"ok\":false}" )
+		return
+	}
+	p.SetOrigin( file.home )
+	p.SetVelocity( <0, 0, 0> )
+	vector eye = p.EyePosition()
+	vector target = file.dummyOrigin + < 0, 0, 48 >
+	p.SnapEyeAngles( VectorToAngles( target - eye ) )
+	AgentLink_Reply( "{\"ok\":true}" )
+}
+
+// Full magazine again (between passes).
+void function WLog_Fill()
+{
+	entity p = WLog_Player()
+	entity w = IsValid( p ) ? p.GetActiveWeapon( eActiveInventorySlot.mainHand ) : null
+	if ( IsValid( w ) )
+		w.SetWeaponPrimaryClipCount( w.GetWeaponPrimaryClipCountMax() )
+	AgentLink_Reply( "{\"ok\":true}" )
+}
+
+void function WLog_Note( string text )
+{
+	printt( format( "[WLOG] note %.4f %s", Time(), text ) )
+	AgentLink_Reply( "{\"ok\":true}" )
+}
+
+// Replace the main weapons with `ref`, fill every ammo type.
+void function WLog_Give( string ref )
+{
+	entity p = WLog_Player()
+	if ( !IsValid( p ) )
+	{
+		AgentLink_Reply( "{\"ok\":false,\"error\":\"no player\"}" )
+		return
+	}
+	foreach ( entity old in p.GetMainWeapons() )
+		p.TakeWeaponNow( old.GetWeaponClassName() )
+	p.GiveWeapon( ref, WEAPON_INVENTORY_SLOT_PRIMARY_0, [] )
+	p.SetActiveWeaponBySlot( eActiveInventorySlot.mainHand, WEAPON_INVENTORY_SLOT_PRIMARY_0 )
+	foreach ( LootData data in SURVIVAL_Loot_GetByType( eLootType.AMMO ) )
+		SURVIVAL_AddToPlayerInventory( p, data.ref, 400 )
+	entity w = p.GetNormalWeapon( WEAPON_INVENTORY_SLOT_PRIMARY_0 )
+	if ( IsValid( w ) )
+	{
+		try { w.SetWeaponPrimaryClipCount( w.GetWeaponPrimaryClipCountMax() ) } catch ( e0 ) { printt( "[WLOG] clip fill failed" ) }
+	}
+	bool semi = false
+	float charge = 0.0
+	int clip = 0
+	float rate = 0.0
+	if ( IsValid( w ) )
+	{
+		try { semi = w.GetWeaponSettingBool( expect int( eWeaponVar["is_semi_auto"] ) ) } catch ( e1 ) {}
+		try { charge = w.GetWeaponSettingFloat( expect int( eWeaponVar["charge_time"] ) ) } catch ( e2 ) {}
+		try { clip = w.GetWeaponSettingInt( expect int( eWeaponVar["ammo_clip_size"] ) ) } catch ( e3 ) {}
+		try { rate = w.GetWeaponSettingFloat( expect int( eWeaponVar["fire_rate"] ) ) } catch ( e4 ) {}
+	}
+	printt( format( "[WLOG] give %.4f %s", Time(), ref ) )
+	AgentLink_Reply( format( "{\"ok\":%s,\"semi\":%s,\"charge\":%.3f,\"clip\":%d,\"rate\":%.3f}", IsValid( w ) ? "true" : "false", semi ? "true" : "false", charge, clip, rate ) )
+}
+
+const array<string> WLOG_SETTINGS = [
+	"fire_rate", "fire_mode", "is_semi_auto", "burst_fire_count", "burst_fire_delay", "charge_time",
+	"ammo_clip_size", "ammo_per_shot", "ammo_min_to_fire", "ammo_stockpile_max",
+	"reload_time", "reload_time_late1", "reloadempty_time", "reloadempty_time_late1", "rechamber_time",
+	"raise_time", "deploy_time", "holster_time", "zoom_fov", "zoom_time_in", "zoom_time_out",
+	"damage_near_value", "damage_far_value", "damage_very_far_value", "damage_near_distance",
+	"damage_far_distance", "damage_very_far_distance", "damage_headshot_scale", "damage_leg_scale",
+	"headshot_distance", "projectile_launch_speed", "projectile_drag_coefficient", "projectile_gravity_scale",
+	"spread_stand_hip", "spread_stand_hip_run", "spread_stand_hip_sprint", "spread_crouch_hip",
+	"spread_air_hip", "spread_stand_ads", "spread_kick_on_fire_stand_hip", "spread_max_kick_stand_hip",
+	"viewkick_pattern", "viewkick_scale_firstshot_hipfire", "viewkick_scale_min_hipfire", "viewkick_scale_max_hipfire",
+	"viewkick_scale_firstshot_ads", "viewkick_scale_min_ads", "viewkick_scale_max_ads",
+	"viewkick_pitch_base", "viewkick_yaw_base", "viewkick_hardScale", "viewkick_perm_pitch_base",
+	"blast_pattern", "blast_pattern_ads_scale", "printname", "shortprintname", "ammo_pool_type"
+]
+
+void function WLog_F( entity w, string key )
+{
+	if ( !( key in eWeaponVar ) )
+	{
+		printt( format( "[WLOG] set %s %s <missing>", w.GetWeaponClassName(), key ) )
+		return
+	}
+	int setting = expect int( eWeaponVar[key] )
+	string v = "?"
+	try { v = format( "%.4f", w.GetWeaponSettingFloat( setting ) ) } catch ( a ) {}
+	if ( v == "?" )
+	{
+		try { v = format( "%d", w.GetWeaponSettingInt( setting ) ) } catch ( b ) {}
+	}
+	if ( v == "?" )
+	{
+		try { v = w.GetWeaponSettingBool( setting ) ? "1" : "0" } catch ( c ) {}
+	}
+	if ( v == "?" )
+	{
+		try { v = w.GetWeaponSettingString( setting ) } catch ( d ) {}
+	}
+	printt( format( "[WLOG] set %s %s %s", w.GetWeaponClassName(), key, v ) )
+}
+
+// The live settings of the held weapon.
+void function WLog_Dump()
+{
+	entity p = WLog_Player()
+	if ( !IsValid( p ) )
+	{
+		AgentLink_Reply( "{\"ok\":false}" )
+		return
+	}
+	entity w = p.GetActiveWeapon( eActiveInventorySlot.mainHand )
+	if ( !IsValid( w ) )
+	{
+		AgentLink_Reply( "{\"ok\":false}" )
+		return
+	}
+	foreach ( string key in WLOG_SETTINGS )
+		WLog_F( w, key )
+	AgentLink_Reply( "{\"ok\":true}" )
+}

@@ -134,6 +134,11 @@ void function WLog_Give( string ref )
 	p.SetActiveWeaponBySlot( eActiveInventorySlot.mainHand, WEAPON_INVENTORY_SLOT_PRIMARY_0 )
 	foreach ( LootData data in SURVIVAL_Loot_GetByType( eLootType.AMMO ) )
 		SURVIVAL_AddToPlayerInventory( p, data.ref, 400 )
+	// Guns reload from the ammo pools, not the backpack items.
+	for ( int i = 0; i < 8; i++ )
+	{
+		try { p.AmmoPool_SetCount( i, 300 ) } catch ( ep ) {}
+	}
 	entity w = p.GetNormalWeapon( WEAPON_INVENTORY_SLOT_PRIMARY_0 )
 	if ( IsValid( w ) )
 	{

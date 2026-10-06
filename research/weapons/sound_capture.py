@@ -80,7 +80,7 @@ class Recorder:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--guns", default="")
-    ap.add_argument("--wait", type=float, default=600.0)
+    ap.add_argument("--wait", type=float, default=1200.0)
     args = ap.parse_args()
     if args.guns:
         guns = [g if g.startswith("mp_weapon_") else "mp_weapon_" + g for g in args.guns.split(",")]
@@ -90,8 +90,17 @@ def main():
     server = connect(37019, "agentlink.token", args.wait)
     client = connect(37020, "agentlink_client.token", args.wait)
     # Keep sound when the game is not focused; no music.
-    for line in ("snd_mute_losefocus 0", "miles_music_volume 0"):
+    for line in ("sound_without_focus 1", "snd_mute_losefocus 0", "miles_music_volume 0"):
         client.cmd(line)
+    # Wait until the player has spawned.
+    deadline = time.time() + args.wait
+    while True:
+        ok, info, _ = server.eval("server", f'WLog_Give( "{guns[0]}" )')
+        if ok and info and info.get("ok"):
+            break
+        if time.time() > deadline:
+            raise SystemExit("no player")
+        time.sleep(3)
     server.eval("server", 'Agent_God( "me", true )')
 
     os.makedirs(OUT, exist_ok=True)
@@ -102,53 +111,68 @@ def main():
     def mark(gun, kind):
         events.append({"gun": gun, "kind": kind, "t": round(rec.now(), 4)})
 
-    time.sleep(2.0)
-    for gun in guns:
-        ok, info, raw = server.eval("server", f'WLog_Give( "{gun}" )')
-        if not (ok and info and info.get("ok")):
-            print(f"{gun}: give failed {raw}")
-            continue
-        mark(gun, "raise")
-        print(gun, info)
-        server.eval("server", 'Agent_Look( "me", <-70, 0, 0> )')
+    try:
         time.sleep(2.0)
-        semi = info.get("semi")
-        charge = float(info.get("charge") or 0.0)
+        for gun in guns:
+            ok, info, raw = server.eval("server", f'WLog_Give( "{gun}" )')
+            if not (ok and info and info.get("ok")):
+                print(f"{gun}: give failed {raw}")
+                continue
+            mark(gun, "raise")
+            print(gun, info)
+            server.eval("server", 'Agent_Look( "me", <-70, 0, 0> )')
+            time.sleep(2.0)
+            semi = info.get("semi")
+            charge = float(info.get("charge") or 0.0)
 
-        def pull(hold):
-            client.cmd("+attack")
-            time.sleep(hold)
-            client.cmd("-attack")
+            def pull(hold):
+                client.cmd("+attack")
+                time.sleep(hold)
+                client.cmd("-attack")
 
-        # Single shots, well apart (clean sample with its full tail).
-        for _ in range(3):
+            # Single shots, well apart (clean sample with its full tail).
+            for _ in range(3):
+                server.eval("server", "WLog_Fill()")
+                mark(gun, "single")
+                pull(charge + 0.35 if charge > 0 else 0.03)
+                time.sleep(1.8)
+            # Sustained fire: hold (auto) or tap at the gun's rate (semi).
             server.eval("server", "WLog_Fill()")
-            mark(gun, "single")
-            pull(charge + 0.35 if charge > 0 else 0.03)
+            mark(gun, "auto")
+            # Stop one round short of empty, so the gun does not reload on
+            # its own and the reload below is a normal one.
+            rate = max(float(info.get("rate") or 4.0), 0.5)
+            clip = int(info.get("clip") or 0)
+            shots = max(1, clip - 1) if clip > 0 else 16
+            hold = min(1.6, shots / rate)
+            if charge > 0:
+                pull(charge + 0.35)
+            elif semi:
+                for _ in range(min(shots, int(1.6 * rate) + 1)):
+                    pull(0.03)
+                    time.sleep(max(0.03, 1.0 / rate - 0.03))
+            else:
+                pull(max(0.05, hold - 0.5 / rate))
+            mark(gun, "auto_end")
             time.sleep(1.8)
-        # Sustained fire: hold (auto) or tap at the gun's rate (semi).
-        server.eval("server", "WLog_Fill()")
-        mark(gun, "auto")
-        end = time.time() + 1.6
-        if charge > 0:
-            pull(charge + 0.35)
-        elif semi:
-            rate = float(info.get("rate") or 4.0)
-            while time.time() < end:
-                pull(0.03)
-                time.sleep(max(0.03, 1.0 / max(rate, 0.5) - 0.03))
-        else:
-            pull(1.6)
-        mark(gun, "auto_end")
-        time.sleep(1.8)
-        # Reload (partly empty after the burst).
-        mark(gun, "reload")
-        client.cmd("+reload")
-        time.sleep(0.15)
-        client.cmd("-reload")
-        time.sleep(4.8)
-        mark(gun, "reload_end")
+            # Reload (partly empty after the burst).
+            # The range refills magazines: leave one round so a reload runs.
+            server.eval(
+                "server",
+                "try { GetPlayerArray()[0].GetActiveWeapon( eActiveInventorySlot.mainHand )"
+                ".SetWeaponPrimaryClipCount( 1 ) } catch ( e ) {}",
+            )
+            time.sleep(0.1)
+            mark(gun, "reload")
+            client.cmd("+reload")
+            time.sleep(0.15)
+            client.cmd("-reload")
+            time.sleep(4.8)
+            mark(gun, "reload_end")
 
+    except (OSError, RuntimeError) as e:
+        # The game went away: keep what was recorded.
+        print("stopped early:", e)
     time.sleep(1.0)
     wav = os.path.join(OUT, f"{run}.wav")
     rec.save(wav)

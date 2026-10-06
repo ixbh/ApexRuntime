@@ -14,7 +14,9 @@ pub mod spec;
 
 pub use ballistics::{Bolt, HitZone, pellet_damage, pellet_dir};
 pub use sim::{Activity, Shot, Slot, WeaponEvent, WeaponInput, WeaponState};
-pub use spec::{Ballistics, Charge, Damage, FireMode, GunSpec, Spread, parse_blast_patterns};
+pub use spec::{
+    Ballistics, Charge, Damage, FireMode, GunSpec, ReloadPlan, Reloads, Spread, parse_blast_patterns,
+};
 
 /// A KeyValues block: `"key" "value"` pairs and nested `"name" { ... }`
 /// blocks (as RSX writes `WeaponData` and the viewkick pattern table).

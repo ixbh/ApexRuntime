@@ -117,8 +117,15 @@ pub struct GunSpec {
     pub reload_add: f32,
     pub reload_empty: f32,
     pub reload_empty_add: f32,
+    /// Reload gameplay points per animation (measured in Flowstate where
+    /// available, see [`Reloads`]).
+    pub reloads: Reloads,
     pub raise: f32,
     pub holster: f32,
+    /// Hip fire out of a sprint waits this long (the regrip).
+    pub sprint_out: f32,
+    /// Weapon inspect length (any action cancels it).
+    pub inspect: f32,
     pub zoom_in: f32,
     pub zoom_out: f32,
     pub zoom_fov: f32,
@@ -127,6 +134,72 @@ pub struct GunSpec {
     pub damage: Damage,
     pub ballistics: Ballistics,
     pub viewkick: Viewkick,
+}
+
+/// One reload animation's gameplay points, seconds from its start.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ReloadPlan {
+    /// The magazine fills; cancelling after this keeps the ammo.
+    pub ammo_in: f32,
+    /// The gun can fire and aim again (the animation runs on a little).
+    pub ready: f32,
+    /// Progress points: a reload cancelled after milestone `k` (1-based)
+    /// resumes later with `resume[k - 1]`.
+    pub milestones: Vec<f32>,
+}
+
+impl ReloadPlan {
+    /// Milestones passed at time `t`.
+    pub fn passed(&self, t: f32) -> u8 {
+        self.milestones.iter().filter(|&&m| t >= m).count() as u8
+    }
+}
+
+/// A gun's reloads (Flowstate behaviour, research/weapons/behaviour_*):
+/// swapping or meleeing cancels a reload; one cancelled after a milestone
+/// but before the ammo resumes from that milestone (a shorter animation)
+/// as soon as the gun is drawn again; sprinting, sliding, jumping, aiming
+/// and firing never cancel it, and aiming waits until it is ready.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Reloads {
+    pub tactical: ReloadPlan,
+    pub empty: ReloadPlan,
+    /// Resumes after tactical milestone 1, 2, ...
+    pub resume: Vec<ReloadPlan>,
+    pub empty_resume: Vec<ReloadPlan>,
+}
+
+impl Reloads {
+    /// Estimates from the weapon file when nothing was measured: ammo at
+    /// 70%, ready at 90%, one milestone at 20%; the resume is the file's
+    /// `reload_time_late1` long.
+    pub fn estimate(reload: f32, empty: f32, late1: f32, empty_late1: f32) -> Reloads {
+        let plan = |t: f32, milestones: Vec<f32>| ReloadPlan {
+            ammo_in: 0.7 * t,
+            ready: 0.9 * t,
+            milestones,
+        };
+        Reloads {
+            tactical: plan(reload, vec![0.2 * reload]),
+            empty: plan(empty, vec![0.2 * empty]),
+            resume: vec![plan(late1, Vec::new())],
+            empty_resume: vec![plan(empty_late1, Vec::new())],
+        }
+    }
+
+    /// The plan for a reload of an empty or partial magazine, fresh
+    /// (`resume_from` 0) or resuming after that milestone.
+    pub fn plan(&self, empty: bool, resume_from: u8) -> &ReloadPlan {
+        let (full, resumes) = if empty {
+            (&self.empty, &self.empty_resume)
+        } else {
+            (&self.tactical, &self.resume)
+        };
+        match resume_from {
+            0 => full,
+            k => resumes.get(k as usize - 1).or(resumes.last()).unwrap_or(full),
+        }
+    }
 }
 
 /// Blast patterns from `blast_patterns.txt`: name -> raw `[x, y]` points.
@@ -214,8 +287,16 @@ impl GunSpec {
             reload_add: reload - n("reload_time_late1", reload * 0.45),
             reload_empty,
             reload_empty_add: reload_empty - n("reloadempty_time_late1", reload_empty * 0.6),
+            reloads: Reloads::estimate(
+                reload,
+                reload_empty,
+                n("reload_time_late1", reload * 0.45),
+                n("reloadempty_time_late1", reload_empty * 0.6),
+            ),
             raise: n("raise_time", 0.3),
             holster: n("holster_time", 0.3),
+            sprint_out: 0.24,
+            inspect: 4.0,
             zoom_in: n("zoom_time_in", 0.2).max(0.01),
             zoom_out: n("zoom_time_out", 0.2).max(0.01),
             zoom_fov: n("zoom_fov", 60.0),

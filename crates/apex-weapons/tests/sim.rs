@@ -15,8 +15,18 @@ fn gun(fire_mode: FireMode, charge: Charge) -> GunSpec {
         reload_add: 1.0,
         reload_empty: 2.45,
         reload_empty_add: 1.0,
+        // Measured R-99 points (Flowstate): ammo in at 80%, ready at 90%,
+        // one milestone; the resumed reload is shorter.
+        reloads: Reloads {
+            tactical: ReloadPlan { ammo_in: 1.44, ready: 1.61, milestones: vec![0.34] },
+            empty: ReloadPlan { ammo_in: 1.96, ready: 2.2, milestones: vec![0.36] },
+            resume: vec![ReloadPlan { ammo_in: 0.8, ready: 1.05, milestones: Vec::new() }],
+            empty_resume: vec![ReloadPlan { ammo_in: 1.0, ready: 1.2, milestones: Vec::new() }],
+        },
         raise: 0.3,
         holster: 0.3,
+        sprint_out: 0.24,
+        inspect: 4.0,
         zoom_in: 0.2,
         zoom_out: 0.2,
         zoom_fov: 60.0,
@@ -92,11 +102,13 @@ fn armed(guns: usize) -> WeaponState {
             gun: 0,
             mag: 17,
             reserve: 60,
+            progress: 0,
         }),
         (guns > 1).then_some(Slot {
             gun: 1,
             mag: 5,
             reserve: 20,
+            progress: 0,
         }),
     ])
 }
@@ -309,4 +321,123 @@ fn personal_roster_loads_when_present() {
         n += 1;
     }
     assert!(n >= 29);
+}
+
+// --- Reload, swap, sprint and inspect rules measured in Flowstate
+// (research/weapons/behaviour_capture.py). ---
+
+fn half_mag(guns: usize) -> WeaponState {
+    let mut s = armed(guns);
+    s.slots[0].as_mut().unwrap().mag = 8;
+    s
+}
+
+fn press(mut i: WeaponInput) -> WeaponInput {
+    i.reload = true;
+    i
+}
+
+#[test]
+fn reload_ammo_goes_in_then_the_gun_is_ready() {
+    let guns = [gun(FireMode::Auto, Charge::None)];
+    let mut s = half_mag(1);
+    run(&mut s, &guns, press(ground()), DT);
+    run(&mut s, &guns, ground(), 1.40);
+    assert_eq!(s.slot().unwrap().mag, 8, "not in yet at 1.40 s");
+    run(&mut s, &guns, ground(), 0.10);
+    assert_eq!(s.slot().unwrap().mag, 17, "in by 1.50 s");
+    assert!(matches!(s.activity, Activity::Reloading { .. }), "not ready before 1.61 s");
+    run(&mut s, &guns, ground(), 0.15);
+    assert_eq!(s.activity, Activity::Ready);
+}
+
+#[test]
+fn swap_after_a_milestone_resumes_the_reload_when_drawn_again() {
+    let guns = [gun(FireMode::Auto, Charge::None), gun(FireMode::Semi, Charge::None)];
+    let mut s = half_mag(2);
+    run(&mut s, &guns, press(ground()), DT);
+    run(&mut s, &guns, ground(), 0.6); // past the 0.34 s milestone
+    let swap = WeaponInput { select: Some(1), ..ground() };
+    let ev = run(&mut s, &guns, swap, DT);
+    assert!(ev.contains(&WeaponEvent::ReloadCancelled));
+    assert_eq!(s.slots[0].unwrap().progress, 1);
+    run(&mut s, &guns, ground(), 1.0);
+    let back = WeaponInput { select: Some(0), ..ground() };
+    run(&mut s, &guns, back, DT);
+    let ev = run(&mut s, &guns, ground(), 0.7); // holster + raise, then resume
+    assert!(ev.contains(&WeaponEvent::ReloadStarted { empty: false }), "{ev:?}");
+    // The resumed reload is the short one: ammo in 0.8 s after it starts.
+    let ev = run(&mut s, &guns, ground(), 0.9);
+    assert!(ev.contains(&WeaponEvent::AmmoLoaded), "{ev:?}");
+    assert_eq!(s.slot().unwrap().mag, 17);
+}
+
+#[test]
+fn swap_before_a_milestone_starts_over() {
+    let guns = [gun(FireMode::Auto, Charge::None), gun(FireMode::Semi, Charge::None)];
+    let mut s = half_mag(2);
+    run(&mut s, &guns, press(ground()), DT);
+    run(&mut s, &guns, ground(), 0.2);
+    run(&mut s, &guns, WeaponInput { select: Some(1), ..ground() }, DT);
+    assert_eq!(s.slots[0].unwrap().progress, 0);
+    assert_eq!(s.slots[0].unwrap().mag, 8);
+}
+
+#[test]
+fn cancel_after_the_ammo_keeps_the_full_magazine() {
+    let guns = [gun(FireMode::Auto, Charge::None), gun(FireMode::Semi, Charge::None)];
+    let mut s = half_mag(2);
+    run(&mut s, &guns, press(ground()), DT);
+    run(&mut s, &guns, ground(), 1.5);
+    run(&mut s, &guns, WeaponInput { select: Some(1), ..ground() }, DT);
+    assert_eq!((s.slots[0].unwrap().mag, s.slots[0].unwrap().progress), (17, 0));
+}
+
+#[test]
+fn melee_cancels_a_reload() {
+    let guns = [gun(FireMode::Auto, Charge::None)];
+    let mut s = half_mag(1);
+    run(&mut s, &guns, press(ground()), DT);
+    run(&mut s, &guns, ground(), 0.5);
+    let ev = run(&mut s, &guns, WeaponInput { melee: true, ..ground() }, DT);
+    assert!(ev.contains(&WeaponEvent::ReloadCancelled));
+    assert_eq!(s.activity, Activity::Ready);
+    assert_eq!(s.slot().unwrap().mag, 8);
+}
+
+#[test]
+fn sprinting_and_aiming_do_not_cancel_a_reload_and_aim_waits_for_it() {
+    let guns = [gun(FireMode::Auto, Charge::None)];
+    let mut s = half_mag(1);
+    run(&mut s, &guns, press(ground()), DT);
+    run(&mut s, &guns, WeaponInput { sprinting: true, ..ground() }, 0.5);
+    run(&mut s, &guns, WeaponInput { ads: true, ..ground() }, 0.9);
+    assert!(matches!(s.activity, Activity::Reloading { .. }));
+    assert_eq!(s.ads, 0.0, "no aiming during the reload");
+    run(&mut s, &guns, WeaponInput { ads: true, ..ground() }, 0.4);
+    assert_eq!(s.slot().unwrap().mag, 17);
+    assert!(s.ads > 0.5, "aims once ready ({})", s.ads);
+}
+
+#[test]
+fn hip_fire_out_of_a_sprint_waits_for_the_regrip() {
+    let guns = [gun(FireMode::Auto, Charge::None)];
+    let mut s = armed(1);
+    run(&mut s, &guns, WeaponInput { sprinting: true, ..ground() }, 0.5);
+    let ev = run(&mut s, &guns, firing(), 0.2);
+    assert_eq!(shots(&ev), 0, "still regripping");
+    let ev = run(&mut s, &guns, firing(), 0.1);
+    assert!(shots(&ev) >= 1);
+}
+
+#[test]
+fn firing_ends_an_inspect_at_once() {
+    let guns = [gun(FireMode::Auto, Charge::None)];
+    let mut s = armed(1);
+    let ev = run(&mut s, &guns, WeaponInput { inspect: true, ..ground() }, DT);
+    assert!(ev.contains(&WeaponEvent::InspectStarted));
+    run(&mut s, &guns, ground(), 1.0);
+    assert!(matches!(s.activity, Activity::Inspecting { .. }));
+    let ev = run(&mut s, &guns, firing(), DT);
+    assert_eq!(shots(&ev), 1, "fires on the same tick");
 }

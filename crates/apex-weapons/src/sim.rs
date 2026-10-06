@@ -19,14 +19,21 @@ pub struct WeaponInput {
     pub sprinting: bool,
     /// Horizontal speed, units per second.
     pub speed: f32,
+    /// Melee pressed (cancels a reload).
+    pub melee: bool,
+    /// Inspect the weapon.
+    pub inspect: bool,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Slot {
     /// Index into the host's gun table.
     pub gun: usize,
     pub mag: u32,
     pub reserve: u32,
+    /// Reload milestones reached by a reload that was cancelled before the
+    /// ammo went in: the next reload of this gun resumes from there.
+    pub progress: u8,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -44,6 +51,11 @@ pub enum Activity {
         t: f32,
         empty: bool,
         loaded: bool,
+        /// Resuming after this milestone (0 = a fresh reload).
+        from: u8,
+    },
+    Inspecting {
+        t: f32,
     },
 }
 
@@ -66,6 +78,8 @@ pub struct WeaponState {
     /// 0 = hip, 1 = fully aimed down sights.
     pub ads: f32,
     pub rng: u64,
+    /// Time left before hip fire after a sprint (the regrip).
+    pub sprint_raise: f32,
 }
 
 impl Default for WeaponState {
@@ -83,6 +97,7 @@ impl Default for WeaponState {
             spread_kick: 0.0,
             ads: 0.0,
             rng: 0x9E37_79B9_7F4A_7C15,
+            sprint_raise: 0.0,
         }
     }
 }
@@ -104,10 +119,17 @@ pub enum WeaponEvent {
     Fired(Shot),
     DryFire,
     ReloadStarted { empty: bool },
+    /// A reload was cut short by a swap or melee.
+    ReloadCancelled,
+    InspectStarted,
     AmmoLoaded,
     ReloadFinished,
     Holstered,
     Raised { slot: usize },
+}
+
+fn spec_of<'a>(guns: &'a [GunSpec], slot: &Slot) -> Option<&'a GunSpec> {
+    guns.get(slot.gun)
 }
 
 /// Recoil spray resets after this long without a shot (seconds).
@@ -121,6 +143,26 @@ impl WeaponState {
         };
         s.active = if s.slots[0].is_some() { 0 } else { 1 };
         s
+    }
+
+    /// End a reload early (swap or melee). Before the ammo went in, the
+    /// slot keeps the milestones reached so the next reload resumes.
+    /// Returns whether a reload was running.
+    fn cancel_reload(&mut self, spec: &GunSpec) -> bool {
+        let Activity::Reloading { t, empty, loaded, from } = self.activity else {
+            return false;
+        };
+        if let Some(slot) = self.slots[self.active].as_mut() {
+            slot.progress = if loaded {
+                0
+            } else if from > 0 {
+                from
+            } else {
+                spec.reloads.plan(empty, 0).passed(t)
+            };
+        }
+        self.activity = Activity::Ready;
+        true
     }
 
     pub fn slot(&self) -> Option<&Slot> {
@@ -196,6 +238,9 @@ impl WeaponState {
             && self.slots[to].is_some()
             && !matches!(self.activity, Activity::Holstering { .. })
         {
+            if self.cancel_reload(spec) {
+                events.push(WeaponEvent::ReloadCancelled);
+            }
             self.activity = Activity::Holstering {
                 left: spec.holster,
                 to,
@@ -204,12 +249,35 @@ impl WeaponState {
             self.burst_left = 0;
         }
 
-        // ADS moves toward the input (no ADS while switching or sprinting).
+        // Melee cuts a reload short.
+        if input.melee && self.cancel_reload(spec) {
+            events.push(WeaponEvent::ReloadCancelled);
+            self.activity = Activity::Ready;
+        }
+        // Inspecting ends the moment the player does anything.
+        if let Activity::Inspecting { t } = self.activity {
+            let busy = input.fire || input.ads || input.reload || input.sprinting || input.melee || input.select.is_some();
+            let t = t + dt;
+            self.activity = if busy || t >= spec.inspect {
+                Activity::Ready
+            } else {
+                Activity::Inspecting { t }
+            };
+        }
+        // Hip fire out of a sprint waits for the regrip.
+        if input.sprinting {
+            self.sprint_raise = spec.sprint_out;
+        } else {
+            self.sprint_raise = (self.sprint_raise - dt).max(0.0);
+        }
+
+        // ADS moves toward the input (not while switching, sprinting or
+        // reloading: a reload finishes first, then the gun comes up).
         let want_ads = input.ads
             && !input.sprinting
             && !matches!(
                 self.activity,
-                Activity::Holstering { .. } | Activity::Raising { .. }
+                Activity::Holstering { .. } | Activity::Raising { .. } | Activity::Reloading { .. }
             );
         let rate = if want_ads {
             1.0 / spec.zoom_in
@@ -243,37 +311,54 @@ impl WeaponState {
                 if left <= 0.0 {
                     self.activity = Activity::Ready;
                     events.push(WeaponEvent::Raised { slot: self.active });
+                    // A reload cancelled after a milestone carries on.
+                    if let Some(slot) = self.slots[self.active]
+                        && slot.progress > 0
+                        && slot.mag < spec_of(guns, &slot).map_or(0, |g| g.clip)
+                        && slot.reserve > 0
+                    {
+                        self.activity = Activity::Reloading {
+                            t: 0.0,
+                            empty: slot.mag == 0,
+                            loaded: false,
+                            from: slot.progress,
+                        };
+                        events.push(WeaponEvent::ReloadStarted { empty: slot.mag == 0 });
+                        self.trigger_was_down = input.fire;
+                        return events;
+                    }
                 } else {
                     self.activity = Activity::Raising { left };
                     self.trigger_was_down = input.fire;
                     return events;
                 }
             }
-            Activity::Reloading { t, empty, loaded } => {
+            Activity::Reloading { t, empty, loaded, from } => {
                 let t = t + dt;
-                let (total, add) = if empty {
-                    (spec.reload_empty, spec.reload_empty_add)
-                } else {
-                    (spec.reload, spec.reload_add)
-                };
+                let plan = spec.reloads.plan(empty, from);
                 let mut loaded = loaded;
-                if !loaded && t >= add {
+                if !loaded && t >= plan.ammo_in {
                     loaded = true;
                     let slot = self.slots[self.active].as_mut().expect("active slot");
                     let need = spec.clip.saturating_sub(slot.mag);
                     let take = need.min(slot.reserve);
                     slot.mag += take;
                     slot.reserve -= take;
+                    slot.progress = 0;
                     events.push(WeaponEvent::AmmoLoaded);
                 }
-                if t >= total {
+                if t >= plan.ready {
                     self.activity = Activity::Ready;
                     events.push(WeaponEvent::ReloadFinished);
                 } else {
-                    self.activity = Activity::Reloading { t, empty, loaded };
+                    self.activity = Activity::Reloading { t, empty, loaded, from };
                     self.trigger_was_down = input.fire;
                     return events;
                 }
+            }
+            Activity::Inspecting { .. } => {
+                self.trigger_was_down = input.fire;
+                return events;
             }
             Activity::Ready => {}
         }
@@ -287,12 +372,25 @@ impl WeaponState {
                 t: 0.0,
                 empty: slot.mag == 0,
                 loaded: false,
+                from: slot.progress,
             };
             self.charge = 0.0;
             self.burst_left = 0;
             events.push(WeaponEvent::ReloadStarted {
                 empty: slot.mag == 0,
             });
+            self.trigger_was_down = input.fire;
+            return events;
+        }
+
+        if input.inspect && !input.fire && !input.ads {
+            self.activity = Activity::Inspecting { t: 0.0 };
+            events.push(WeaponEvent::InspectStarted);
+            self.trigger_was_down = input.fire;
+            return events;
+        }
+        // Out of a sprint the gun regrips before it can fire.
+        if self.sprint_raise > 0.0 || input.sprinting {
             self.trigger_was_down = input.fire;
             return events;
         }

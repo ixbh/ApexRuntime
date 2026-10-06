@@ -30,6 +30,7 @@ fn gun(fire_mode: FireMode, charge: Charge) -> GunSpec {
         zoom_in: 0.2,
         zoom_out: 0.2,
         zoom_fov: 60.0,
+        ammo: None,
         ads_move_scale: 1.0,
         spread: Spread {
             stand_hip: 2.0,
@@ -440,4 +441,26 @@ fn firing_ends_an_inspect_at_once() {
     assert!(matches!(s.activity, Activity::Inspecting { .. }));
     let ev = run(&mut s, &guns, firing(), DT);
     assert_eq!(shots(&ev), 1, "fires on the same tick");
+}
+
+#[test]
+fn guns_of_one_ammo_type_share_the_reserve() {
+    let mut light = gun(FireMode::Auto, Charge::None);
+    light.ammo = Some(0);
+    let guns = [light.clone(), light];
+    let mut s = armed(2);
+    s.pools[0] = 20;
+    s.slots[0].as_mut().unwrap().mag = 8;
+    run(&mut s, &guns, press(ground()), DT);
+    run(&mut s, &guns, ground(), 1.7);
+    assert_eq!(s.slots[0].unwrap().mag, 17);
+    assert_eq!(s.pools[0], 11, "the 9 rounds came from the shared pool");
+    // The other gun reloads from what is left.
+    run(&mut s, &guns, WeaponInput { select: Some(1), ..ground() }, DT);
+    run(&mut s, &guns, ground(), 0.8);
+    run(&mut s, &guns, press(ground()), DT);
+    run(&mut s, &guns, ground(), 1.7);
+    assert_eq!(s.slots[1].unwrap().mag, 16, "5 + 11 from the pool");
+    assert_eq!(s.pools[0], 0);
+    assert_eq!(s.slots[1].unwrap().reserve, 20, "the slot's own reserve is not used");
 }

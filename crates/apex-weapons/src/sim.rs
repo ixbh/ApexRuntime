@@ -80,6 +80,10 @@ pub struct WeaponState {
     pub rng: u64,
     /// Time left before hip fire after a sprint (the regrip).
     pub sprint_raise: f32,
+    /// Carried ammo per Apex ammo type ([`crate::AMMO_TYPES`]), shared by
+    /// every gun of that type. Guns without a type use their slot's
+    /// `reserve`.
+    pub pools: [u32; 6],
 }
 
 impl Default for WeaponState {
@@ -98,6 +102,7 @@ impl Default for WeaponState {
             ads: 0.0,
             rng: 0x9E37_79B9_7F4A_7C15,
             sprint_raise: 0.0,
+            pools: [0; 6],
         }
     }
 }
@@ -163,6 +168,35 @@ impl WeaponState {
         }
         self.activity = Activity::Ready;
         true
+    }
+
+    /// Rounds the active gun can reload from (its ammo type's pool, or the
+    /// slot's own reserve).
+    pub fn available(&self, guns: &[GunSpec]) -> u32 {
+        let Some(slot) = self.slot() else { return 0 };
+        match guns.get(slot.gun).and_then(|g| g.ammo) {
+            Some(t) => self.pools[t],
+            None => slot.reserve,
+        }
+    }
+
+    /// Take up to `n` rounds for the active gun from where it reloads.
+    fn take_reserve(&mut self, guns: &[GunSpec], n: u32) -> u32 {
+        let active = self.active;
+        let Some(slot) = self.slots[active] else { return 0 };
+        match guns.get(slot.gun).and_then(|g| g.ammo) {
+            Some(t) => {
+                let k = n.min(self.pools[t]);
+                self.pools[t] -= k;
+                k
+            }
+            None => {
+                let slot = self.slots[active].as_mut().expect("active slot");
+                let k = n.min(slot.reserve);
+                slot.reserve -= k;
+                k
+            }
+        }
     }
 
     pub fn slot(&self) -> Option<&Slot> {
@@ -315,7 +349,7 @@ impl WeaponState {
                     if let Some(slot) = self.slots[self.active]
                         && slot.progress > 0
                         && slot.mag < spec_of(guns, &slot).map_or(0, |g| g.clip)
-                        && slot.reserve > 0
+                        && self.available(guns) > 0
                     {
                         self.activity = Activity::Reloading {
                             t: 0.0,
@@ -339,11 +373,10 @@ impl WeaponState {
                 let mut loaded = loaded;
                 if !loaded && t >= plan.ammo_in {
                     loaded = true;
+                    let need = spec.clip.saturating_sub(self.slot().map_or(0, |s| s.mag));
+                    let take = self.take_reserve(guns, need);
                     let slot = self.slots[self.active].as_mut().expect("active slot");
-                    let need = spec.clip.saturating_sub(slot.mag);
-                    let take = need.min(slot.reserve);
                     slot.mag += take;
-                    slot.reserve -= take;
                     slot.progress = 0;
                     events.push(WeaponEvent::AmmoLoaded);
                 }
@@ -365,7 +398,7 @@ impl WeaponState {
 
         // Ready: reload on request, or when the trigger meets an empty mag.
         let slot = *self.slot().expect("active slot");
-        let can_reload = slot.mag < spec.clip && slot.reserve > 0;
+        let can_reload = slot.mag < spec.clip && self.available(guns) > 0;
         let empty = slot.mag < spec.ammo_per_shot;
         if can_reload && (input.reload || (empty && input.fire && self.cooldown <= 0.0)) {
             self.activity = Activity::Reloading {

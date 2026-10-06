@@ -15,7 +15,8 @@ pub mod spec;
 pub use ballistics::{Bolt, HitZone, pellet_damage, pellet_dir};
 pub use sim::{Activity, Shot, Slot, WeaponEvent, WeaponInput, WeaponState};
 pub use spec::{
-    Ballistics, Charge, Damage, FireMode, GunSpec, ReloadPlan, Reloads, Spread, parse_blast_patterns,
+    AMMO_TYPES, Ballistics, Charge, Damage, FireMode, GunSpec, ReloadPlan, Reloads, Spread, ammo_type,
+    parse_blast_patterns,
 };
 
 /// A KeyValues block: `"key" "value"` pairs and nested `"name" { ... }`

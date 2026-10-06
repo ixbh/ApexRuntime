@@ -129,11 +129,23 @@ pub struct GunSpec {
     pub zoom_in: f32,
     pub zoom_out: f32,
     pub zoom_fov: f32,
+    /// Apex ammo type the gun reloads from ([`AMMO_TYPES`] index); `None`
+    /// for guns without shared ammo.
+    pub ammo: Option<usize>,
     pub ads_move_scale: f32,
     pub spread: Spread,
     pub damage: Damage,
     pub ballistics: Ballistics,
     pub viewkick: Viewkick,
+}
+
+/// Apex ammo types (`ammo_pool_type` in the weapon files): light, heavy,
+/// energy, shotgun, sniper, arrows.
+pub const AMMO_TYPES: [&str; 6] = ["bullet", "highcal", "special", "shotgun", "sniper", "arrows"];
+
+/// Index of an `ammo_pool_type` in [`AMMO_TYPES`].
+pub fn ammo_type(name: &str) -> Option<usize> {
+    AMMO_TYPES.iter().position(|t| t.eq_ignore_ascii_case(name.trim()))
 }
 
 /// One reload animation's gameplay points, seconds from its start.
@@ -300,6 +312,7 @@ impl GunSpec {
             zoom_in: n("zoom_time_in", 0.2).max(0.01),
             zoom_out: n("zoom_time_out", 0.2).max(0.01),
             zoom_fov: n("zoom_fov", 60.0),
+            ammo: def.str("ammo_pool_type").and_then(ammo_type),
             ads_move_scale: n("ads_move_speed_scale", 1.0),
             spread: Spread {
                 stand_hip,

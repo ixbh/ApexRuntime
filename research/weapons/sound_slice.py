@@ -141,9 +141,24 @@ def main():
         if auto and t.get("auto") and t.get("auto_end"):
             a0, a1 = S(t["auto"][0]), S(t["auto_end"][0] + 0.15)
             ons = onsets(env, thr, a0, a1, int(0.03 * rate))
-            # Shots overlap in sustained fire: step by the measured rate.
-            shots_per_s = measured.get(gun) or num("fire_rate", 10.0)
-            period = max(1, int(round(rate / shots_per_s)))
+            # Shots overlap in sustained fire: the true cadence is the
+            # envelope's autocorrelation peak near the gun's fire rate.
+            nominal = num("fire_rate", 10.0)
+            body = env[a0 + int(0.25 * rate) : a1 - int(0.15 * rate)]
+            period = max(1, int(round(rate / nominal)))
+            if len(body) > 4 * period:
+                e = body - body.mean()
+                ac = np.correlate(e, e, mode="full")[len(e) - 1 :]
+                lo, hi = int(period * 0.85), int(period * 1.15)
+                # Score each lag over several shots in a row, so a sub-peak
+                # inside one shot cannot win.
+                lags = [L for L in range(lo, hi) if 4 * L < len(ac)]
+                if lags:
+                    score = [ac[L] + ac[2 * L] + ac[3 * L] + ac[4 * L] for L in lags]
+                    found = lags[int(np.argmax(score))]
+                    # Trust it only near the listed rate (fast guns blur).
+                    if abs(period / found - 1.0) <= 0.07:
+                        period = found
             if ons and a1 - ons[0] > 6 * period:
                 start = ons[0] + 2 * period - int(0.004 * rate)
                 count = max(1, int(0.6 * rate / period))
@@ -154,6 +169,7 @@ def main():
                 loop[:xf] = loop[:xf] * w + loop[-xf:] * (1 - w)
                 loop = loop[:-xf]
                 write(os.path.join(out, "loop.wav"), loop, rate)
+                json.dump({"shots_per_second": rate / period}, open(os.path.join(out, "loop.json"), "w"))
                 # One shot of sustained fire (exactly one period, so each
                 # shot can play its own copy in sync with the gun).
                 one = x[start : start + period] * gain

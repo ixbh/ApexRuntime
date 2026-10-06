@@ -99,6 +99,38 @@ def newest_dir(role):
     return max(dirs, key=os.path.getmtime) if dirs else None
 
 
+class Tail:
+    """Collects [WLOG] lines from a client log folder as they are written
+    (the game rotates script.log at 10 MB and drops older parts)."""
+
+    def __init__(self, folder, out_path):
+        self.folder = folder
+        self.pos = os.path.getsize(os.path.join(folder, "script.log"))
+        self.out = open(out_path, "a", encoding="utf-8")
+
+    def _read(self, name, start):
+        with open(os.path.join(self.folder, name), "rb") as f:
+            f.seek(start)
+            return f.read()
+
+    def pump(self):
+        size = os.path.getsize(os.path.join(self.folder, "script.log"))
+        data = b""
+        if size < self.pos:  # rotated: the rest of the old file is script.1.log
+            try:
+                data += self._read("script.1.log", self.pos)
+            except OSError:
+                pass
+            self.pos = 0
+        chunk = self._read("script.log", self.pos)
+        self.pos += len(chunk)
+        data += chunk
+        for line in data.decode("utf-8", "replace").splitlines():
+            if "[WLOG]" in line:
+                self.out.write(line + "\n")
+        self.out.flush()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--guns", default="")
@@ -129,6 +161,8 @@ def main():
     server.eval("server", 'Agent_God( "me", true )')
 
     started = time.strftime("%Y%m%d-%H%M%S")
+    os.makedirs(args.out, exist_ok=True)
+    tail = Tail(newest_dir("client"), os.path.join(args.out, f"{started}-client-wlog.log"))
     plan = []
     for gun in guns:
         ok, info, raw = server.eval("server", f'WLog_Give( "{gun}" )')
@@ -176,6 +210,7 @@ def main():
             client.cmd("-reload")
             time.sleep(5.0)
             client.eval("client", "WLog_Stop()")
+            tail.pump()
         plan.append({"gun": gun, "ok": True, **info})
 
     os.makedirs(args.out, exist_ok=True)

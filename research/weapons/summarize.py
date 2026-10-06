@@ -26,7 +26,10 @@ def main():
     else:
         plans = sorted(glob.glob(os.path.join(CAP, "*-plan.json")))
         prefix = os.path.basename(plans[-1])[: -len("-plan.json")]
-    client = open(os.path.join(CAP, f"{prefix}-client-script.log"), encoding="utf-8", errors="replace").read()
+    wlog = os.path.join(CAP, f"{prefix}-client-wlog.log")
+    if not os.path.exists(wlog):
+        wlog = os.path.join(CAP, f"{prefix}-client-script.log")
+    client = open(wlog, encoding="utf-8", errors="replace").read()
     server = open(os.path.join(CAP, f"{prefix}-server-script.log"), encoding="utf-8", errors="replace").read()
 
     settings = defaultdict(dict)

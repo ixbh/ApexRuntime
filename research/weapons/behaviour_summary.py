@@ -141,5 +141,91 @@ def main():
             print("  ", k, v)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and "--rules" not in sys.argv:
     main()
+
+
+def plan_from(rows, start_index=0):
+    """Reload plan from frames: times relative to the reload start at or
+    after `start_index`: milestone changes, ammo in, ready."""
+    rs = next((i for i in range(start_index, len(rows)) if rows[i]["reload"] == 1), None)
+    if rs is None:
+        return None, None
+    t0 = rows[rs]["t"]
+    weapon = rows[rs]["weapon"]
+    clip0 = rows[rs - 1]["clip"] if rs > 0 else rows[rs]["clip"]
+    milestones, ammo, ready, ms = [], None, None, rows[rs]["ms"]
+    for r in rows[rs:]:
+        if r["weapon"] != weapon:
+            break
+        if r["ms"] > ms:
+            milestones.append(round(r["t"] - t0, 3))
+        ms = r["ms"]
+        if ammo is None and r["clip"] > clip0:
+            ammo = round(r["t"] - t0, 3)
+        if ammo is not None and r["reload"] == 0 and r["rdy"] == 1:
+            ready = round(r["t"] - t0, 3)
+            break
+    if ammo is None or ready is None:
+        return None, rs
+    return {"ammo_in": ammo, "ready": ready, "milestones": milestones}, rs
+
+
+def plans():
+    """Per-gun gameplay timings for the IW4L host (captures/weapon_rules.json)."""
+    out = {}
+    for path in sorted(glob.glob(os.path.join(CAP, "*-behaviour-wlog.log"))):
+        for (gun, scen), rows in frames(path).items():
+            g = out.setdefault(gun, {})
+            if scen in ("reload_tactical", "reload_empty"):
+                p, _ = plan_from(rows)
+                if p:
+                    g["tactical" if scen == "reload_tactical" else "empty"] = p
+            elif scen in ("reload_resume", "reload_empty_resume"):
+                first_plan, rs = plan_from(rows)
+                # The cancelled reload's milestone, then the resumed reload
+                # after the gun comes back.
+                if rs is None:
+                    continue
+                cancel = next((i for i in range(rs, len(rows)) if rows[i]["reload"] == 0), None)
+                if cancel is None:
+                    continue
+                reached = max(r["ms"] for r in rows[rs:cancel])
+                away = next((i for i in range(cancel, len(rows)) if rows[i]["weapon"] != rows[0]["weapon"]), None)
+                back = next((i for i in range(away, len(rows)) if rows[i]["weapon"] == rows[0]["weapon"]), None) if away else None
+                if back is None or reached == 0:
+                    continue
+                p, rs2 = plan_from(rows, back)
+                if p:
+                    key = "resume" if scen == "reload_resume" else "empty_resume"
+                    p["after_milestone"] = reached
+                    p["automatic"] = rows[rs2]["t"] - rows[back]["t"] < 1.0
+                    p["sequence"] = rows[rs2]["seq"]
+                    g[key] = p
+            elif scen == "swap":
+                t0 = rows[0]["t"]
+                other = first(rows, t0, lambda r: r["weapon"] != rows[0]["weapon"])
+                back = first(rows, t0, lambda r: r["weapon"] == rows[0]["weapon"], after=(other or 0) + 0.2)
+                back_ready = first(rows, t0, lambda r: r["weapon"] == rows[0]["weapon"] and r["rdy"] == 1, after=(back or 0))
+                if other:
+                    g["holster"] = other
+                if back and back_ready:
+                    g["raise"] = round(back_ready - back, 3)
+            elif scen == "sprint_fire":
+                t0 = rows[0]["t"]
+                shot = first(rows, t0, lambda r: r["clip"] < rows[0]["clip"])
+                if shot is not None:
+                    g["sprint_out"] = round(shot - 1.2, 3)
+            elif scen == "inspect":
+                t0 = rows[0]["t"]
+                start = first(rows, t0, lambda r: "inspect" in r["seq"])
+                end = first(rows, t0, lambda r: "inspect" not in r["seq"], after=(start or 0) + 0.05)
+                if start is not None and end is not None:
+                    g["inspect"] = round(end - start, 3)
+    json.dump(out, open(os.path.join(CAP, "weapon_rules.json"), "w"), indent=1)
+    return out
+
+
+if __name__ == "__main__" and "--rules" in sys.argv:
+    for gun, g in plans().items():
+        print(gun, json.dumps(g))

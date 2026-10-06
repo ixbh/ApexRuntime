@@ -222,8 +222,34 @@ def plans():
                 end = first(rows, t0, lambda r: "inspect" not in r["seq"], after=(start or 0) + 0.05)
                 if start is not None and end is not None:
                     g["inspect"] = round(end - start, 3)
+    inspect_from_animations(out)
     json.dump(out, open(os.path.join(CAP, "weapon_rules.json"), "w"), indent=1)
     return out
+
+
+def inspect_from_animations(out):
+    """Inspects longer than the capture window: the animation's own length
+    (apex-cast notes_probe example prints it)."""
+    import re
+    import subprocess
+
+    exe = os.path.join(os.path.dirname(__file__), "..", "..", "target", "debug", "examples", "notes_probe.exe")
+    if not os.path.exists(exe):
+        return
+    for g in json.load(open(r"F:\ApexContent\guns.json")):
+        r = out.setdefault(g["gun"], {})
+        if "inspect" in r:
+            continue
+        files = []
+        for d in g["anims"]:
+            for name in ("inspect_basic_0.cast", "inspect_0.cast"):
+                f = os.path.join(r"F:\ApexContent", d, name)
+                if os.path.exists(f):
+                    files.append(f)
+        if files:
+            m = re.search(r"\(([\d.]+)s @", subprocess.run([exe, files[0]], capture_output=True, text=True).stdout)
+            if m:
+                r["inspect"] = float(m.group(1))
 
 
 if __name__ == "__main__" and "--rules" in sys.argv:

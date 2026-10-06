@@ -154,10 +154,17 @@ def main():
                 loop[:xf] = loop[:xf] * w + loop[-xf:] * (1 - w)
                 loop = loop[:-xf]
                 write(os.path.join(out, "loop.wav"), loop, rate)
+                # One shot of sustained fire (exactly one period, so each
+                # shot can play its own copy in sync with the gun).
+                one = x[start : start + period] * gain
+                write(os.path.join(out, "auto_shot.wav"), fade(one, rate, 0.001, 0.004), rate)
                 # The last shot is within a period of the trigger release.
                 n_shots = int((S(t["auto_end"][0]) - ons[0]) / period)
                 last = ons[0] + max(0, n_shots - 1) * period - int(0.004 * rate)
                 tail = trim_silence(x[last : last + int(1.6 * rate)] * gain, rate, thr * gain)
+                # The decay alone (after the last shot's own period).
+                decay = trim_silence(x[last + period : last + int(1.6 * rate)] * gain, rate, thr * gain)
+                write(os.path.join(out, "decay.wav"), fade(decay, rate, 0.004, 0.05), rate)
                 write(os.path.join(out, "tail.wav"), fade(tail, rate), rate)
         if t.get("reload"):
             r = S(t["reload"][0])

@@ -8,6 +8,8 @@ global function WLog_Aim
 global function WLog_Dump
 global function WLog_Note
 global function WLog_Fill
+global function WLog_GiveSecond
+global function WLog_SetClip
 
 struct
 {
@@ -98,6 +100,35 @@ void function WLog_Aim()
 	vector eye = p.EyePosition()
 	vector target = file.dummyOrigin + < 0, 0, 48 >
 	p.SnapEyeAngles( VectorToAngles( target - eye ) )
+	AgentLink_Reply( "{\"ok\":true}" )
+}
+
+// Second gun into slot 2 (keeps slot 1), for swap tests.
+void function WLog_GiveSecond( string ref )
+{
+	entity p = WLog_Player()
+	if ( !IsValid( p ) )
+	{
+		AgentLink_Reply( "{\"ok\":false}" )
+		return
+	}
+	entity old = p.GetNormalWeapon( WEAPON_INVENTORY_SLOT_PRIMARY_1 )
+	if ( IsValid( old ) )
+		p.TakeWeaponNow( old.GetWeaponClassName() )
+	p.GiveWeapon( ref, WEAPON_INVENTORY_SLOT_PRIMARY_1, [] )
+	p.SetActiveWeaponBySlot( eActiveInventorySlot.mainHand, WEAPON_INVENTORY_SLOT_PRIMARY_0 )
+	AgentLink_Reply( "{\"ok\":true}" )
+}
+
+// Magazine of the held gun set to `n` (clipless guns ignore it).
+void function WLog_SetClip( int n )
+{
+	entity p = WLog_Player()
+	entity w = IsValid( p ) ? p.GetActiveWeapon( eActiveInventorySlot.mainHand ) : null
+	if ( IsValid( w ) )
+	{
+		try { w.SetWeaponPrimaryClipCount( n ) } catch ( e0 ) {}
+	}
 	AgentLink_Reply( "{\"ok\":true}" )
 }
 

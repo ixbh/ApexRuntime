@@ -57,7 +57,30 @@ void function WLog_Thread( int gen, string tag )
 			try { zoom = p.GetZoomFrac() } catch ( e2 ) {}
 			vector eye = p.EyeAngles()
 			vector cam = p.CameraAngles()
-			printt( format( "[WLOG] f %s %.4f %s %d %d %.3f %.4f %.4f %.4f %.4f %.4f %s", tag, Time(), name, clip, reloading, zoom, eye.x, eye.y, cam.x, cam.y, cam.z, seq ) )
+			// Movement and weapon state (each guarded: not every build has
+			// every query).
+			int spr = 0
+			int gnd = 0
+			int crh = 0
+			int sld = 0
+			int mnt = 0
+			int rdy = 0
+			int act = -1
+			int ms = -1
+			try { spr = p.IsSprinting() ? 1 : 0 } catch ( e3 ) {}
+			try { gnd = p.IsOnGround() ? 1 : 0 } catch ( e4 ) {}
+			try { crh = p.IsCrouched() ? 1 : 0 } catch ( e5 ) {}
+			try { sld = p.IsSliding() ? 1 : 0 } catch ( e6 ) {}
+			try { mnt = p.IsMantling() ? 1 : 0 } catch ( e7 ) {}
+			if ( IsValid( w ) )
+			{
+				try { rdy = w.IsReadyToFire() ? 1 : 0 } catch ( e8 ) {}
+				try { act = w.GetWeaponActivity() } catch ( e9 ) {}
+				try { ms = w.GetReloadMilestoneIndex() } catch ( e10 ) {}
+			}
+			vector vel = p.GetVelocity()
+			float speed = Length( < vel.x, vel.y, 0.0 > )
+			printt( format( "[WLOG] f %s %.4f %s %d %d %.3f %.4f %.4f %.4f %.4f %.4f %s %d %d %d %d %d %d %d %d %.1f", tag, Time(), name, clip, reloading, zoom, eye.x, eye.y, cam.x, cam.y, cam.z, seq, spr, gnd, crh, sld, mnt, rdy, act, ms, speed ) )
 		}
 		WaitFrame()
 	}

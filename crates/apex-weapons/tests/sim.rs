@@ -291,7 +291,8 @@ fn damage_falls_off_between_bands() {
 /// Every gun of the user's export, when present (never in the repo).
 #[test]
 fn personal_roster_loads_when_present() {
-    let root = std::path::Path::new(r"F:\ApexContent");
+    let root = content();
+    let root = root.as_path();
     let Ok(manifest) = std::fs::read_to_string(root.join("guns.json")) else {
         return;
     };
@@ -463,4 +464,9 @@ fn guns_of_one_ammo_type_share_the_reserve() {
     assert_eq!(s.slots[1].unwrap().mag, 16, "5 + 11 from the pool");
     assert_eq!(s.pools[0], 0);
     assert_eq!(s.slots[1].unwrap().reserve, 20, "the slot's own reserve is not used");
+}
+
+/// The personal content folder (`IW4L_APEX_CONTENT`, default `F:\ApexContent`).
+fn content() -> std::path::PathBuf {
+    std::env::var_os("IW4L_APEX_CONTENT").map_or_else(|| r"F:\ApexContent".into(), Into::into)
 }

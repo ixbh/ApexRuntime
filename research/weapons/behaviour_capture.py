@@ -7,7 +7,7 @@ activity, viewmodel sequence, sprint/ground/crouch/slide/mantle, speed).
 
     python research/weapons/behaviour_capture.py [--guns r97,wingman]
 
-Writes F:/ApexContent/captures/<run>-behaviour-wlog.log (frames, tagged
+Writes <content>/captures/<run>-behaviour-wlog.log (frames, tagged
 gun:scenario) and <run>-behaviour.json (scenarios and step times).
 """
 
@@ -19,8 +19,9 @@ import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 from capture import Tail, connect, newest_dir  # noqa: E402
+from paths import CONTENT  # noqa: E402
 
-OUT = r"F:\ApexContent\captures"
+OUT = os.path.join(CONTENT, r"captures")
 GUNS = "r97,rspn101,wingman,energy_shotgun,sniper,lmg,g2,shotgun"
 RELEASE = "-forward;-speed;-duck;-jump;-zoom;-attack;-melee;-reload"
 

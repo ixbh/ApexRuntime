@@ -1,7 +1,7 @@
 """Cut a sound_capture.py recording into per-gun sound files for IW4L.
 
 For every gun in the run's timeline, writes to
-F:/ApexContent/captures/sound/guns/<gun>/ (personal, never committed):
+<content>/captures/sound/guns/<gun>/ (personal, never committed):
 
     fire_1..3.wav  single shots with their full tail (and any pump/lever)
     loop.wav       full-auto guns: a seamless loop of sustained fire
@@ -22,9 +22,11 @@ import sys
 import wave
 
 import numpy as np
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import CONTENT  # noqa: E402
 
-SOUND = r"F:\ApexContent\captures\sound"
-WEAPONS = r"F:\ApexContent\captures\weapons.json"
+SOUND = os.path.join(CONTENT, r"captures\sound")
+WEAPONS = os.path.join(CONTENT, r"captures\weapons.json")
 PEAK = 0.89  # -1 dBFS for the loudest fire sample of the run
 
 

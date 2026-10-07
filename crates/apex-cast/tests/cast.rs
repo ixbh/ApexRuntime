@@ -274,13 +274,9 @@ fn rejects_garbage() {
 #[test]
 fn personal_exports_load_when_present() {
     let gun =
-        std::path::Path::new(r"F:\ApexContent\weapons\r99\mdl\Weapons\r97\ptpov_r97_LOD0.cast");
-    let arms = std::path::Path::new(
-        r"F:\ApexContent\characters\wattson\mdl\Weapons\arms\pov_pilot_light_wattson_LOD0.cast",
-    );
-    let reload = std::path::Path::new(
-        r"F:\ApexContent\weapons\r99\animseq\weapons\r97\ptpov_r97\reload_seq_0.cast",
-    );
+        content().join(r"weapons\r99\mdl\Weapons\r97\ptpov_r97_LOD0.cast");
+    let arms = content().join(r"characters\wattson\mdl\Weapons\arms\pov_pilot_light_wattson_LOD0.cast");
+    let reload = content().join(r"weapons\r99\animseq\weapons\r97\ptpov_r97\reload_seq_0.cast");
     if !(gun.exists() && arms.exists() && reload.exists()) {
         eprintln!("personal Apex exports not present; skipped");
         return;
@@ -322,9 +318,7 @@ fn personal_exports_load_when_present() {
 
 #[test]
 fn arm_sides_in_model_space() {
-    let arms = std::path::Path::new(
-        r"F:\ApexContent\characters\wattson\mdl\Weapons\arms\pov_pilot_light_wattson_LOD0.cast",
-    );
+    let arms = content().join(r"characters\wattson\mdl\Weapons\arms\pov_pilot_light_wattson_LOD0.cast");
     if !arms.exists() {
         return;
     }
@@ -332,4 +326,9 @@ fn arm_sides_in_model_space() {
     let g = arms.skeleton.globals(&arms.skeleton.rest_locals());
     let x = |n: &str| g[arms.skeleton.index_of(n).unwrap()].pos[0];
     eprintln!("right wrist x {} left wrist x {}", x("def_r_wrist"), x("def_l_wrist"));
+}
+
+/// The personal content folder (`IW4L_APEX_CONTENT`, default `F:\ApexContent`).
+fn content() -> std::path::PathBuf {
+    std::env::var_os("IW4L_APEX_CONTENT").map_or_else(|| r"F:\ApexContent".into(), Into::into)
 }

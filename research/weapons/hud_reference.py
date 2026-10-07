@@ -13,8 +13,9 @@ import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 from capture import ROOT, connect  # noqa: E402
+from paths import CONTENT  # noqa: E402
 
-OUT = r"F:\ApexContent\captures\hud"
+OUT = os.path.join(CONTENT, r"captures\hud")
 
 
 def shot(client, name, seen):
@@ -89,5 +90,32 @@ def main():
     print("done")
 
 
+def optics(guns):
+    """ADS reference shots for scoped guns (`--optics r97,sniper`)."""
+    os.makedirs(OUT, exist_ok=True)
+    server = connect(37019, "agentlink.token", 900)
+    client = connect(37020, "agentlink_client.token", 900)
+    while True:
+        ok, reply, raw = server.eval("server", "WLog_Setup( 400.0 )")
+        if ok and reply and reply.get("ok"):
+            break
+        time.sleep(5)
+    seen = set(glob.glob(os.path.join(ROOT, "**", "*.tga"), recursive=True))
+    for g in guns:
+        ref = g if g.startswith("mp_weapon_") else "mp_weapon_" + g
+        server.eval("server", f'WLog_Give( "{ref}" )')
+        server.eval("server", "WLog_Aim()")
+        time.sleep(2.0)
+        shot(client, f"hip_{g}", seen)
+        client.cmd("+zoom")
+        time.sleep(1.2)
+        shot(client, f"ads_{g}", seen)
+        client.cmd("-zoom")
+        time.sleep(0.5)
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 2 and sys.argv[1] == "--optics":
+        optics(sys.argv[2].split(","))
+    else:
+        main()

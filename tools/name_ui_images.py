@@ -9,7 +9,7 @@ copied here.
 
     python tools/name_ui_images.py
 
-Writes F:/ApexContent/ui/named/<path>.png and names.json (personal).
+Writes <content>/ui/named/<path>.png and names.json (personal).
 """
 
 import json
@@ -18,16 +18,20 @@ import re
 import shutil
 import sys
 
-sys.path.insert(0, r"F:\Dev\GameReferences\bspconv\tools\tf2common")
+CONTENT = os.environ.get("IW4L_APEX_CONTENT", r"F:\ApexContent")
+# bspconv checkout (reference tool, AGPL): its tools/tf2common/guid.py.
+BSPCONV = os.environ.get("BSPCONV_DIR", r"F:\Dev\GameReferences\bspconv")
+sys.path.insert(0, os.path.join(BSPCONV, "tools", "tf2common"))
 from guid import string_to_guid  # noqa: E402
 
-SRC = r"F:\ApexContent\ui\uiia\ui_image"
-DST = r"F:\ApexContent\ui\named"
+SRC = os.path.join(CONTENT, "ui", "uiia", "ui_image")
+DST = os.path.join(CONTENT, "ui", "named")
+FLOWSTATE = os.environ.get("R5_FLOWSTATE", r"F:\R5Flowstate")
 ROOTS = [
-    r"F:\Dev\GameReferences\s21-platform",
-    r"F:\ApexContent\game",
-    r"F:\R5Flowstate\platform",
-    r"F:\ApexContent\lists",
+    os.path.join(os.path.dirname(BSPCONV), "s21-platform"),
+    os.path.join(CONTENT, "game"),
+    os.path.join(FLOWSTATE, "platform"),
+    os.path.join(CONTENT, "lists"),
 ]
 EXTS = (".nut", ".gnut", ".txt", ".csv", ".rson", ".json", ".menu", ".res", ".vdf", ".set")
 

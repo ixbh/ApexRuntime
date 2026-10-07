@@ -7,9 +7,9 @@ Audited and set up 2026-10-01 on Windows 11 Pro 10.0.26200.
 | Git | already installed | 2.55.0.windows.5 |
 | Python | already installed | 3.11.9 |
 | VS Code | already installed | 1.135.0 (`F:\Microsoft VS Code`) |
-| GitHub CLI | already installed (not logged in; not needed) | 2.98.0 |
+| GitHub CLI | already installed | 2.98.0 |
 | winget | already installed | – |
-| Vulkan runtime | already installed | `vulkan-1.dll`. GPUs: NVIDIA RTX 3080 Ti (driver 32.0.16.1088) + AMD Radeon iGPU |
+| Vulkan runtime | already installed | `vulkan-1.dll`. GPUs: NVIDIA RTX 3080 Ti + AMD Radeon iGPU |
 | **rustup** | **installed** (winget `Rustlang.Rustup`) | 1.29.1, `%USERPROFILE%\.cargo\bin` |
 | **Rust** | **installed** | stable-x86_64-pc-windows-msvc, rustc/cargo 1.99.0. The repo pins 1.99.0 in `rust-toolchain.toml`. |
 | **VS 2022 Build Tools** | **installed** (winget, VCTools workload) | `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools` (MSVC x64 toolset) |
@@ -21,8 +21,8 @@ Audited and set up 2026-10-01 on Windows 11 Pro 10.0.26200.
 
 | | |
 |---|---|
-| Apex Legends (Steam) | `E:\SteamLibrary\steamapps\common\Apex Legends`, build `25522636`, `R5pc_r5-301_J44_CL11595978_FSv30_1_2026_09_23_12_37`, gameversion v3.0.2.44 |
-| R5Reloaded / R5Flowstate | not found |
+| R5Flowstate (offline) | the measurement reference and source of personal exports; see [`INSTALL.md`](../INSTALL.md) |
+| Apex Legends (retail) | never used: anti-cheat protected, not touched by any tool here |
 
 Paths are recorded in the git-ignored `tools/local-env.ps1`. Re-detect with
 `tools/detect-apex.ps1`. **ApexRuntime never writes to game folders.**

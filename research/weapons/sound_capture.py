@@ -7,7 +7,7 @@ playing sound during the run. Aims at the sky so no hit sounds mix in.
 
     python research/weapons/sound_capture.py [--guns r97,wingman]
 
-Output (personal, never committed): F:/ApexContent/captures/sound/<run>.wav
+Output (personal, never committed): <content>/captures/sound/<run>.wav
 and <run>.json (events: gun, kind, seconds from the recording start).
 """
 
@@ -23,8 +23,9 @@ import pyaudiowpatch as pa
 
 sys.path.insert(0, os.path.dirname(__file__))
 from capture import connect  # noqa: E402
+from paths import CONTENT  # noqa: E402
 
-OUT = r"F:\ApexContent\captures\sound"
+OUT = os.path.join(CONTENT, r"captures\sound")
 
 
 class Recorder:
@@ -85,7 +86,7 @@ def main():
     if args.guns:
         guns = [g if g.startswith("mp_weapon_") else "mp_weapon_" + g for g in args.guns.split(",")]
     else:
-        guns = [g["gun"] for g in json.load(open(r"F:\ApexContent\guns.json"))]
+        guns = [g["gun"] for g in json.load(open(os.path.join(CONTENT, r"guns.json")))]
 
     server = connect(37019, "agentlink.token", args.wait)
     client = connect(37020, "agentlink_client.token", args.wait)

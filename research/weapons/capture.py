@@ -5,7 +5,7 @@ server 37019, client 37020) and the ApexRuntime.WeaponLog mod installed
 (research/weapons/flowstate_mod). Drives only console/script commands, no
 OS input, so the game can run unfocused on another monitor.
 
-For every gun in F:/ApexContent/guns.json (or --guns): give it, log its live
+For every gun in <content>/guns.json (or --guns): give it, log its live
 settings, fire at a dummy from the hip (hold for auto, taps for semi, hold +
 release for charge), reload, then the same aimed down sights. The mod
 writes [WLOG] lines to the client and server script.log; afterwards they
@@ -14,6 +14,7 @@ are copied to --out.
     python research/weapons/capture.py [--guns r97,wingman] [--dist 400]
 """
 
+import sys
 import argparse
 import base64
 import glob
@@ -22,8 +23,10 @@ import os
 import shutil
 import socket
 import time
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import CONTENT, FLOWSTATE  # noqa: E402
 
-ROOT = r"F:\R5Flowstate"
+ROOT = FLOWSTATE
 
 
 class Link:
@@ -135,14 +138,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--guns", default="")
     ap.add_argument("--dist", type=float, default=400.0, help="dummy distance (units)")
-    ap.add_argument("--out", default=r"F:\ApexContent\captures")
+    ap.add_argument("--out", default=os.path.join(CONTENT, r"captures"))
     ap.add_argument("--wait", type=float, default=900.0, help="seconds to wait for the game")
     args = ap.parse_args()
 
     if args.guns:
         guns = [g if g.startswith("mp_weapon_") else "mp_weapon_" + g for g in args.guns.split(",")]
     else:
-        guns = [g["gun"] for g in json.load(open(r"F:\ApexContent\guns.json"))]
+        guns = [g["gun"] for g in json.load(open(os.path.join(CONTENT, r"guns.json")))]
 
     server = connect(37019, "agentlink.token", args.wait)
     client = connect(37020, "agentlink_client.token", args.wait)

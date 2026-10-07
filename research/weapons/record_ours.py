@@ -3,7 +3,7 @@ compare gun sounds with the Flowstate recordings.
 
     python research/weapons/record_ours.py --carrier ump45_mp --seconds 150
 
-Writes F:/ApexContent/captures/sound/ours-<time>.wav.
+Writes <content>/captures/sound/ours-<time>.wav.
 """
 
 import argparse
@@ -14,8 +14,9 @@ import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sound_capture import OUT, Recorder  # noqa: E402
+from paths import IW4L  # noqa: E402
 
-IW4L = r"F:\Dev\iw4l-apex"
+IW4L = IW4L
 
 
 def main():

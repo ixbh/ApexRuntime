@@ -6,12 +6,15 @@ ADS), with times from the scenario start.
     python research/weapons/behaviour_report.py [run] [--gun r97] [--scenario reload_swap_early]
 """
 
+import sys
 import argparse
 import glob
 import os
 import re
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import CONTENT  # noqa: E402
 
-CAP = r"F:\ApexContent\captures"
+CAP = os.path.join(CONTENT, r"captures")
 F_RE = re.compile(
     r"\[WLOG\] f (\S+):(\S+) ([\d.]+) (\S+) (-?\d+) (\d) ([\d.]+) \S+ \S+ \S+ \S+ \S+ (\S+)"
     r" (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) ([\d.]+)"

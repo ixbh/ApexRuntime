@@ -12,8 +12,10 @@ import re
 import statistics
 import sys
 from collections import defaultdict
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import CONTENT  # noqa: E402
 
-CAP = r"F:\ApexContent\captures"
+CAP = os.path.join(CONTENT, r"captures")
 
 F_RE = re.compile(r"\[WLOG\] f (\S+):(hip|ads) ([\d.]+) (\S+) (-?\d+) (\d) ([\d.]+) (\S+) (\S+) (\S+) (\S+) (\S+) (\S+)")
 SET_RE = re.compile(r"\[WLOG\] set (\S+) (\S+) (.*)$", re.M)

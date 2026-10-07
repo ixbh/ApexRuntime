@@ -5,11 +5,12 @@ camera, which every shot pushes by a fixed step and which settles back to
 the eye after the trigger is released. Per gun and stance (hip / ads) this
 writes the per-shot kick steps (degrees, IW/Source convention: pitch
 negative = up, yaw positive = left) and the measured recovery, to
-F:/ApexContent/captures/recoil.json (personal data, not committed).
+<content>/captures/recoil.json (personal data, not committed).
 
     python research/weapons/recoil.py
 """
 
+import sys
 import glob
 import json
 import math
@@ -17,8 +18,10 @@ import os
 import re
 import statistics
 from collections import defaultdict
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paths import CONTENT  # noqa: E402
 
-CAP = r"F:\ApexContent\captures"
+CAP = os.path.join(CONTENT, r"captures")
 F_RE = re.compile(
     r"\[WLOG\] f (\S+):(hip|ads) ([\d.]+) \S+ (-?\d+) (\d) ([\d.]+) (\S+) (\S+) (\S+) (\S+)"
 )

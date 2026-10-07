@@ -86,8 +86,8 @@ fn pattern_loops_and_scales() {
 /// The user's personal exports, when present (never in the repo).
 #[test]
 fn personal_r99_when_present() {
-    let w = std::path::Path::new(r"F:\ApexContent\weapons\r99\settings\weapon\mp_weapon_r97.txt");
-    let p = std::path::Path::new(r"F:\ApexContent\weapons\common\weapon\viewkick_patterns.txt");
+    let w = content().join(r"weapons\r99\settings\weapon\mp_weapon_r97.txt");
+    let p = content().join(r"weapons\common\weapon\viewkick_patterns.txt");
     if !(w.exists() && p.exists()) {
         return;
     }
@@ -111,4 +111,9 @@ fn personal_r99_when_present() {
         "full-mag aim drift (no randomness): pitch {:.2} deg, yaw {:.2} deg",
         total[0], total[1]
     );
+}
+
+/// The personal content folder (`IW4L_APEX_CONTENT`, default `F:\ApexContent`).
+fn content() -> std::path::PathBuf {
+    std::env::var_os("IW4L_APEX_CONTENT").map_or_else(|| r"F:\ApexContent".into(), Into::into)
 }

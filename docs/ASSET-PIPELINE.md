@@ -40,13 +40,13 @@ Gotchas found the hard way:
   exit 1, GUI crash). With it: `-matltextures --loadwhitelist mdl_,matl,txtr`
   exports a model plus all its maps as PNG next to the Cast file.
 - Audio: `rsx_nogui -nogui -export --loadwhitelist asrc --exporttypes asrc
-  --exportfilter <name> <F:\R5Flowstateudio\ship\general.mbnk>` writes
+  --exportfilter <name> <F:\R5Flowstate\audio\ship\general.mbnk>` writes
   WAVs (253k sources). The event/project file (`audio.mprj` v42) is not
   readable, so which layers a sound event mixes is unknown.
 - **Never** pass a game file to `rsx_nogui --list`: the argument is the
   list's output path, so it overwrites the file (this truncated Flowstate's
   `general.mbnk` once; the Flowstate launcher's verify repairs it). For
-  sound names use the existing listing `F:\ApexContent\listsudio.csv`.
+  sound names use the existing listing `F:\ApexContent\lists\audio.csv`.
 - Weapon data: `--loadwhitelist wepn --exporttypes wepn --exportfilter
   mp_weapon_r97.rpak` (and `viewkick_patterns`) -> KeyValues text.
 

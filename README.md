@@ -10,10 +10,13 @@ jump arc, wall response and movement-tech results as Apex. We get there by
 measurement and independent re-implementation, **not** by copying Respawn's
 code or assets.
 
-> **Status, Phase 1:** architecture proven. A deterministic, engine-independent
-> core steps a player against an abstract collision interface, with tests,
-> replayable input scripts, CSV traces and a Bevy sandbox. The movement
-> *rules* are still a Source-lineage placeholder, not Apex.
+> **Status:** movement is measured against offline R5Flowstate and replays it
+> tick for tick (sprint, slide, lurch, tap-strafe, bhop, mantle, superglide,
+> mantle boost, wall climb, fall stun, slopes). Weapon behaviour (fire
+> modes, recoil, reloads and what cancels them, swaps, shared ammo) runs in
+> `apex-weapons`. It plays inside MW2 through an IW4L fork.
+>
+> **To play it, see [INSTALL.md](INSTALL.md).**
 
 ## Layout
 
@@ -24,6 +27,9 @@ code or assets.
 | `apex-core` | **the movement**: `step(state, input, config, world, dt) -> state`. Depends on nothing else. |
 | `apex-telemetry` | trace rows, CSV/JSON, input scripts, `apex-replay` CLI |
 | `apex-sandbox` | Bevy first-person test bed (the only crate using Bevy) |
+| `apex-weapons` | Apex weapon engine: fire modes, spread, recoil, reloads, swaps, ammo |
+| `apex-cast` | reader for Cast model/animation files (your own exports) |
+| `apex-iw4l` | glue to IW4L's player state and collision |
 | `apex-tables` | `preflight` (what is unfinished?) and `trace-diff` (does our trace match the reference?) |
 
 All tuning numbers live in `sheets/constants.tsv` and per-mechanic progress in
@@ -33,7 +39,6 @@ from or checked against them.
 ## Quick start (Windows)
 
 ```powershell
-cd C:\Dev\ApexRuntime
 cargo test --workspace
 cargo run -p apex-tables --bin preflight
 cargo run -p apex-sandbox --release

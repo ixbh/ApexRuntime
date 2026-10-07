@@ -2,7 +2,7 @@
 (ammo-in, ready, animation end) as seconds and as fractions of the gun's
 reload time, what each reload interruption does (cancelled? magazine
 after), sprint-to-fire and sprint-to-ADS delays, ADS in/out, swap times,
-inspect length, air/slide fire. Writes F:/ApexContent/captures/behaviour.json.
+inspect length, air/slide fire. Writes <content>/captures/behaviour.json.
 
     python research/weapons/behaviour_summary.py
 """
@@ -14,8 +14,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from behaviour_report import frames  # noqa: E402
+from paths import CONTENT  # noqa: E402
 
-CAP = r"F:\ApexContent\captures"
+CAP = os.path.join(CONTENT, r"captures")
 
 
 def first(rows, t0, cond, after=0.0):
@@ -236,14 +237,14 @@ def inspect_from_animations(out):
     exe = os.path.join(os.path.dirname(__file__), "..", "..", "target", "debug", "examples", "notes_probe.exe")
     if not os.path.exists(exe):
         return
-    for g in json.load(open(r"F:\ApexContent\guns.json")):
+    for g in json.load(open(os.path.join(CONTENT, r"guns.json"))):
         r = out.setdefault(g["gun"], {})
         if "inspect" in r:
             continue
         files = []
         for d in g["anims"]:
             for name in ("inspect_basic_0.cast", "inspect_0.cast"):
-                f = os.path.join(r"F:\ApexContent", d, name)
+                f = os.path.join(CONTENT, d, name)
                 if os.path.exists(f):
                     files.append(f)
         if files:

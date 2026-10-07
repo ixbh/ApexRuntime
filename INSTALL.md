@@ -42,14 +42,14 @@ A GPU with Vulkan or DX12 drivers is needed (any recent NVIDIA/AMD/Intel).
 
 ## 2. Get the code (side by side)
 
-Fork both repos on GitHub (or just clone them). They must be in the **same
+Fork both repos on GitHub ([ApexRuntime](https://github.com/ixbh/ApexRuntime), [iw4l-apex](https://github.com/ixbh/iw4l-apex)) or just clone them. They must be in the **same
 parent folder** with these folder names, because iw4l-apex builds
 ApexRuntime from `../ApexRuntime`:
 
 ```powershell
 mkdir C:\Dev; cd C:\Dev
-git clone https://github.com/<you>/ApexRuntime.git
-git clone -b apex-movement https://github.com/<you>/iw4l-apex.git
+git clone https://github.com/ixbh/ApexRuntime.git
+git clone -b apex-movement https://github.com/ixbh/iw4l-apex.git
 ```
 
 ```
